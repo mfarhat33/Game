@@ -224,7 +224,7 @@ body{background:radial-gradient(120% 60% at 50% 0%,var(--bg2),transparent 70%),r
   </section>
   <div class="field" id="field"><canvas id="cv" aria-label="Tile field"></canvas></div>
   <section class="tray" aria-label="Your hand">
-    <div class="erow"><span class="ebub num" id="energy-n" aria-label="Energy">0</span><div class="energy" aria-hidden="true"><span id="energy"></span></div></div>
+    <div class="erow"><span class="ebub num" id="energy-n" aria-label="Energy">0</span><div class="energy" aria-hidden="true"><span id="energy"></span></div><button class="tool" id="btn-face" hidden>Aim ▲</button></div>
     <div class="hand">
       <div class="grp guns"><h4>Forces<span class="nx" id="next-g"></span></h4><div class="slots"><button class="card gun" id="pow-0" disabled></button><button class="card gun" id="pow-1" disabled></button></div></div>
       <div class="grp fx"><h4>Effects<span class="nx" id="next-f"></span></h4><div class="slots"><button class="card" id="pow-2" disabled></button><button class="card" id="pow-3" disabled></button><button class="card" id="pow-4" disabled></button></div></div>
@@ -282,7 +282,7 @@ body{background:radial-gradient(120% 60% at 50% 0%,var(--bg2),transparent 70%),r
 <div class="veil" id="dlg-pause" hidden>
   <div class="sheet">
     <h2>Paused</h2>
-    <p>Pick a card, press on the board, drag to aim and let go to play it. Let go off the board to cancel. Hold a card to read what it does. On a keyboard: 1 to 5 pick a card, the arrow keys move the target, Enter plays it.</p>
+    <p>Pick a card, press on the board, drag to aim and let go to play it. Let go off the board to cancel. Hold a card to read what it does. With a force selected, the Aim button turns it to face backwards on ground you hold in the rival's half. On a keyboard: 1 to 5 pick a card, the arrow keys move the target, Enter plays it.</p>
     <div class="row">
       <button class="btn" id="pause-quit">Quit stage</button>
       <button class="btn go" id="pause-resume">Resume</button>
@@ -572,15 +572,15 @@ function newMatch(idle){
   else if (pat === 3){ W(10, 11, 2, 2); W(6, 15, 2, 2); W(14, 15, 2, 2); }
   if (n >= 3){ let plates = Math.min(130, (n - 2)*14); while (plates-- > 0){ const i = Math.floor(Math.random()*COLS*(ROWS - rowsMine)); if (owner[i] === 1) hp[i] = 1; } }
   const who = rivalFor(n);
-  let foe = who.cards.filter(k => CARDS[k].unlock <= n + 1);
+  let foe = who.cards.filter(k => CARDS[k].unlock <= n + 1 && (n >= 3 || !MOB[k]));   // no rival troops in the first two stages
   if (!foe.some(k => UNITS[k])) foe.push('sentry');
   foe = foe.concat(foe.filter(k => UNITS[k]), n < 3 ? ['sentry', 'sentry'] : []);
   M = { boss, who, share:.5, coach:!idle && !P.tut && n === 1 ? 0 : DONE, coachT:0, shake:0, floats:[], parts:[], noteAge:0, gunsLost:0, gunsKilled:0, played:0, srT:0, tw:new Int8Array(N).fill(-1), idle:!!idle, over:false, t:TIME, sel:-1, cur:{ x:COLS/2, y:ROWS - 8 },
-    owner, hp, mine, flash, lost:[[], []], note:null, bullets:[], units:[], beams:[], shells:[], puffs:[], temps:[], last:[null, null],
+    owner, prev:Uint8Array.from(owner), rings:[], face:false, hp, mine, flash, lost:[[], []], note:null, bullets:[], units:[], beams:[], shells:[], puffs:[], temps:[], last:[null, null],
     gq:shuffle(P.guns), fq:shuffle(P.fx), foe, foeNext:foe.find(k => UNITS[k]), handKey:'',
     sides:[
       { rate:1 + .07*P.up.rapid, flow:.33*(1 + .1*P.up.dynamo), energy:5, over:0, frozen:0, shield:0, cap:0, heavy:0, wide:0, lock:0 },
-      { rate:Math.min(1.15, .8 + .035*n), flow:Math.min(.44, .25 + .012*n)*who.tune, energy:3, over:0, frozen:0, shield:0, cap:0, heavy:0, wide:0, lock:0 }
+      { rate:Math.min(1.15, .8 + .035*n), flow:Math.min(.44, .25 + .012*n)*who.tune*(n < 3 ? .75 : 1), energy:n < 3 ? 1 : 3, over:0, frozen:0, shield:0, cap:0, heavy:0, wide:0, lock:0 }
     ] };
   const put = (side, type, c, back, mul = 1) => addUnit(side, type, c + .5, base(side) + fwd(side)*back + .5, mul);
   if (idle){ for (const side of [0, 1]){ put(side, 'sweeper', 5, 5, 50); put(side, 'sentry', 11, 3, 50); put(side, 'sweeper', 16, 5, 50); } }
@@ -591,7 +591,7 @@ function addUnit(side, type, x, y, pw = 1, hpSet){
   const own = gunsOf(side);
   if (UNITS[type] && own.length >= MAXUNITS) kill(own.reduce((a, b) => a.hp/a.max <= b.hp/b.max ? a : b), true);
   const max = hpSet || Math.round(hpOf(type)*pw);
-  M.units.push({ side, type, x, y, hp:max, max, cd:.3, t:Math.random()*3, ang:0, frz:0, hit:0, alt:1, acc:0, accT:0, fly:!!(MOB[type] && MOB[type].fly) });
+  M.units.push({ side, type, x, y, hp:max, max, cd:.3, t:Math.random()*3, ang:0, frz:0, hit:0, alt:1, acc:0, accT:0, born:.28, dir:placeDir || fwd(side), fly:!!(MOB[type] && MOB[type].fly) });
 }
 function kill(u, quiet){
   const at = M.units.indexOf(u); if (at < 0) return;
@@ -607,7 +607,7 @@ function hurt(u, dmg, by){
 function flip(i, side){
   if (M.owner[i] === 2) return;
   if (M.owner[i] === 1 - side) M.lost[1 - side].push(i);
-  M.owner[i] = side; M.hp[i] = 0; M.mine[i] = 0; M.flash[i] = 1;
+  M.prev[i] = M.owner[i]; M.owner[i] = side; M.hp[i] = 0; M.mine[i] = 0; M.flash[i] = 1;
   const S = M.sides[side]; S.energy = Math.min(MAXE, S.energy + .01);
   const u = unitAt(i); if (u && u.side !== side) kill(u);
   tick(side);
@@ -624,13 +624,18 @@ function strike(i, side, dmg = 1){
   flip(i, side); return true;
 }
 function blast(side, c, r, rad, dmg = 1){
-  for (let dr = -rad; dr <= rad; dr++) for (let dc = -rad; dc <= rad; dc++)
-    if (dc*dc + dr*dr <= rad*rad + 1 && inb(c + dc, r + dr)) strike((r + dr)*COLS + c + dc, side, dmg);
+  M.rings.push({ x:c + .5, y:r + .5, max:rad + 1.2, t:.4, side });
+  if (rad >= 2) for (let q = 0; q < 8; q++){ const a = Math.random()*6.283, v = 3 + Math.random()*7; M.parts.push({ x:c + .5, y:r + .5, vx:Math.cos(a)*v, vy:Math.sin(a)*v, t:.45, side }); }
+  for (let dr = -rad; dr <= rad; dr++) for (let dc = -rad; dc <= rad; dc++){
+    const j = (r + dr)*COLS + c + dc;
+    // tiles further from the centre change a beat later, so the blast reads as a wave
+    if (dc*dc + dr*dr <= rad*rad + 1 && inb(c + dc, r + dr) && strike(j, side, dmg)) M.flash[j] = 1 + Math.hypot(dc, dr)*.16;
+  }
 }
 function frontRow(side, c){ for (let k = 0; k < ROWS; k++){ const r = base(side) + fwd(side)*k; if (M.owner[r*COLS + c] === 1 - side) return r; } return -1; }
-let shotP = 0;   // extra pierce of the cannon that is firing right now
+let shotP = 0, shotDir = 0, placeDir = 0;   // extra pierce and facing of the cannon firing right now; facing for the piece being placed
 function bullet(side, x, y, ang, speed, pierce = 0, ttl = 9){
-  M.bullets.push({ side, x, y, ttl, vx:Math.sin(ang)*speed, vy:fwd(side)*Math.cos(ang)*speed, pierce:pierce + shotP + (M.sides[side].heavy > 0 ? 1 : 0) });
+  M.bullets.push({ side, x, y, ttl, vx:Math.sin(ang)*speed, vy:(shotDir || fwd(side))*Math.cos(ang)*speed, pierce:pierce + shotP + (M.sides[side].heavy > 0 ? 1 : 0) });
 }
 function nearestUnit(side, x, y, rad){
   let best = null, bd = rad*rad;
@@ -638,7 +643,7 @@ function nearestUnit(side, x, y, rad){
   return best;
 }
 function beamUp(u, reach, dmg){
-  const f = fwd(u.side), S = M.sides[u.side], c = Math.floor(u.x); let r = Math.floor(u.y) + f, left = reach + (S.heavy > 0 ? 4 : 0), end = r;
+  const f = u.dir || fwd(u.side), S = M.sides[u.side], c = Math.floor(u.x); let r = Math.floor(u.y) + f, left = reach + (S.heavy > 0 ? 4 : 0), end = r;
   for (; r >= 0 && r < ROWS && left > 0; r += f){
     const i = r*COLS + c, o = M.owner[i]; end = r;
     if (o === 2){ if (M.tw[i] === u.side) continue; break; }
@@ -650,8 +655,8 @@ function beamUp(u, reach, dmg){
   M.beams.push({ x0:u.x, y0:u.y, x1:u.x, y1:end + .5, side:u.side, t:.28, w:reach > 12 ? 1.5 : 1 }); tone(u.side ? 300 : 880, .12, 'sawtooth', .03);
 }
 function fireUnit(u){
-  const U = UNITS[u.type], f = fwd(u.side), k = u.type;
-  shotP = U.p || 0;
+  const U = UNITS[u.type], f = u.dir || fwd(u.side), k = u.type;
+  shotP = U.p || 0; shotDir = f;
   if (k === 'pike') beamUp(u, 12, 2);
   else if (k === 'rail') beamUp(u, 30, 3);
   else if (k === 'mortar') M.shells.push({ side:u.side, x0:u.x, y0:u.y, x1:clamp(u.x + (Math.random()*6 - 3), .5, COLS - .5), y1:clamp(u.y + f*(9 + Math.random()*7), .5, ROWS - .5), t:0, dur:.75 });
@@ -672,12 +677,12 @@ function fireUnit(u){
     else if (!v) bullet(u.side, u.x, u.y, 0, U.speed);
   }
   else bullet(u.side, u.x, u.y, u.ang, U.speed);
-  shotP = 0;
+  shotP = 0; shotDir = 0;
 }
 
 /* Troops and dragons move on their own each frame. */
 function moveMob(u, dt){
-  const T = MOB[u.type], f = fwd(u.side);
+  const T = MOB[u.type], f = u.dir || fwd(u.side);
   u.cd -= dt;
   if (T.fly){
     u.y += f*T.spd*dt;
@@ -722,13 +727,13 @@ function cast(side, id, x, y){
   if (side === 0) M.played++;
   if (id === 'squad'){ for (const dc of [-2, 0, 2]){ const j = r*COLS + c + dc; if (inb(c + dc, r) && M.owner[j] === side && !unitAt(j)) addUnit(side, 'grunt', c + dc + .5, r + .5, pw); } }
   else if (isForce(id)) addUnit(side, id, c + .5, r + .5, pw);
-  else if (id === 'trench'){ for (let k = 0; k < R(8); k++) for (let dc = -1; dc <= 1; dc++) if (inb(c + dc, r + f*k)) strike((r + f*k)*COLS + c + dc, side, 3); }
-  else if (id === 'wedge'){ for (let k = 0; k < R(7); k++){ const h = Math.floor(k*.6); for (let dc = -h; dc <= h; dc++) if (inb(c + dc, r + f*k)) strike((r + f*k)*COLS + c + dc, side, 3); } }
+  else if (id === 'trench'){ for (let k = 0; k < R(8); k++) for (let dc = -1; dc <= 1; dc++) { const j = (r + f*k)*COLS + c + dc; if (inb(c + dc, r + f*k) && strike(j, side, 3)) M.flash[j] = 1 + k*.14; } }
+  else if (id === 'wedge'){ for (let k = 0; k < R(7); k++){ const h = Math.floor(k*.6); for (let dc = -h; dc <= h; dc++) { const j = (r + f*k)*COLS + c + dc; if (inb(c + dc, r + f*k) && strike(j, side, 3)) M.flash[j] = 1 + k*.14; } } }
   else if (id === 'splash'){ blast(side, c, r, 3 + (rk >= 2 ? 1 : 0), 4); boom(.1, .25); shake(.2); }
-  else if (id === 'crossfire'){ for (let k = 0; k < 2 + (rk >= 2 ? 1 : 0); k++) if (inb(0, r + f*k)) for (let cc = 0; cc < COLS; cc++) strike((r + f*k)*COLS + cc, side, 2); }
+  else if (id === 'crossfire'){ for (let k = 0; k < 2 + (rk >= 2 ? 1 : 0); k++) if (inb(0, r + f*k)) for (let cc = 0; cc < COLS; cc++){ const j = (r + f*k)*COLS + cc; if (strike(j, side, 2)) M.flash[j] = 1 + Math.abs(cc - c)*.07; } }
   else if (id === 'barrage'){ for (let cc = 0; cc < COLS; cc++) bullet(side, cc + .5, base(side) + .5, 0, 24, rk); }
   else if (id === 'tide'){
-    for (let cc = 0; cc < COLS; cc++){ let left = rk >= 2 ? 3 : 2; for (let k = 0; k < ROWS && left; k++){ const i = (base(side) + f*k)*COLS + cc; if (M.owner[i] === 1 - side){ strike(i, side); left--; } } }
+    for (let cc = 0; cc < COLS; cc++){ let left = rk >= 2 ? 3 : 2; for (let k = 0; k < ROWS && left; k++){ const i = (base(side) + f*k)*COLS + cc; if (M.owner[i] === 1 - side){ if (strike(i, side)) M.flash[i] = 1 + cc*.04; left--; } } }
     tone(180, .3, 'sawtooth', .04);
   }
   else if (id === 'wildfire'){
@@ -771,7 +776,7 @@ function cast(side, id, x, y){
   else if (id === 'sabotage'){ const u = nearestUnit(1 - side, x, y, CARDS[id].r); if (u) hurt(u, R(10), side); }
   else if (id === 'hijack'){
     const u = nearestUnit(1 - side, x, y, CARDS[id].r);
-    if (u){ u.side = side; u.max = Math.round(hpOf(u.type)*pw); u.hp = u.max; const i = Math.floor(u.y)*COLS + Math.floor(u.x); if (!u.fly && inb(Math.floor(u.x), Math.floor(u.y))){ M.owner[i] = side; M.flash[i] = 1; blast(side, Math.floor(u.x), Math.floor(u.y), 2); } }
+    if (u){ u.side = side; u.dir = fwd(side); u.max = Math.round(hpOf(u.type)*pw); u.hp = u.max; const i = Math.floor(u.y)*COLS + Math.floor(u.x); if (!u.fly && inb(Math.floor(u.x), Math.floor(u.y))){ M.owner[i] = side; M.flash[i] = 1; blast(side, Math.floor(u.x), Math.floor(u.y), 2); } }
   }
   else if (id === 'echo'){ const L = M.last[side]; if (L){ cast(side, L.id, L.x, L.y); M.note = { text:'Echo: ' + CARDS[L.id].name, side, t:1.4 }; } return; }
   if (!isForce(id)) M.last[side] = { id, x, y };
@@ -793,7 +798,8 @@ function spend(k, x, y){
   const why = valid(0, id, x, y); if (why) return say(why);
   S.energy -= card.cost;
   const q = k < HG ? M.gq : M.fq, at = k < HG ? k : k - HG; q.splice(at, 1); q.push(id);
-  cast(0, id, x, y); M.sel = -1; return true;
+  placeDir = isForce(id) && M.face && y < ROWS/2 ? 1 : 0;   // facing back only counts on ground held in the rival's half
+  cast(0, id, x, y); placeDir = 0; M.face = false; M.sel = -1; return true;
 }
 function power(k){
   if (!live() || !slot(k)) return;
@@ -860,6 +866,7 @@ function step(dt){
     const u = M.units[k]; if (!u) continue;   // a blast earlier in this pass can remove several at once
     const S = M.sides[u.side];
     if (u.hit > 0) u.hit -= dt;
+    if (u.born > 0) u.born -= dt;
     if (u.frz > 0) u.frz -= dt;
     if (u.acc > 0){ u.accT -= dt; if (u.accT <= 0){ M.floats.push({ x:u.x, y:u.y, text:'-' + u.acc, t:.7 }); u.acc = 0; u.accT = .45; } }
     if (S.frozen > 0 || u.frz > 0) continue;
@@ -893,9 +900,9 @@ function step(dt){
     if (q.t >= q.dur){ blast(q.side, Math.floor(q.x1), Math.floor(q.y1), 2, 3); tone(110, .14, 'sine', .04); M.puffs.push({ x:q.x1, y:q.y1, t:.3, side:q.side }); M.shells.splice(k, 1); }
   }
   for (let k = M.temps.length - 1; k >= 0; k--){ const q = M.temps[k]; q.t -= dt; if (q.t <= 0){ if (M.owner[q.i] === 2) M.owner[q.i] = q.side; M.tw[q.i] = -1; M.flash[q.i] = .4; M.temps.splice(k, 1); } }
-  for (const list of [M.beams, M.puffs]) for (let k = list.length - 1; k >= 0; k--){ list[k].t -= dt; if (list[k].t <= 0) list.splice(k, 1); }
+  for (const list of [M.beams, M.puffs, M.rings]) for (let k = list.length - 1; k >= 0; k--){ list[k].t -= dt; if (list[k].t <= 0) list.splice(k, 1); }
   if (M.note && M.note.t > 0) M.note.t -= dt;
-  for (let i = 0; i < N; i++) if (M.flash[i] > 0) M.flash[i] = Math.max(0, M.flash[i] - 4*dt);
+  for (let i = 0; i < N; i++) if (M.flash[i] > 0){ M.flash[i] = Math.max(0, M.flash[i] - 3.4*dt); if (!M.flash[i]) M.prev[i] = M.owner[i]; }
   if (!M.idle){
     const s = share(); M.share = s;
     if (M.t <= 0 && !M.ot && Math.abs(s - .5) < .02){ M.ot = true; M.t = 20; M.note = { text:'Overtime', side:0, t:2 }; tone(659, .2, 'triangle', .06); }   // too close to call: 20 more seconds
@@ -954,30 +961,53 @@ function drawMob(u, col, fg, bg, ice){
   if (T.fly){ ctx.moveTo(0, -R); ctx.lineTo(R, 0); ctx.lineTo(0, R); ctx.lineTo(-R, 0); ctx.closePath(); } else if (ctx.roundRect) ctx.roundRect(-R, -R, 2*R, 2*R, R*.35); else ctx.rect(-R, -R, 2*R, 2*R);
   ctx.fillStyle = fg; ctx.fill(); ctx.lineJoin = 'round'; ctx.lineWidth = Math.max(2, t*.22); ctx.strokeStyle = c; ctx.stroke();
   const im = pic(u.type, c), sz = R*(T.fly ? 1.25 : 1.5);
-  if (im){ ctx.save(); if (u.side) ctx.scale(1, -1); ctx.drawImage(im, -sz/2, -sz/2, sz, sz); ctx.restore(); }
+  if (im){ ctx.save(); if ((u.dir || fwd(u.side)) > 0) ctx.scale(1, -1); ctx.drawImage(im, -sz/2, -sz/2, sz, sz); ctx.restore(); }
   if (u.hit > 0){ ctx.globalAlpha = u.hit*4; ctx.fillStyle = '#fff'; ctx.fill(); ctx.globalAlpha = 1; }
   // health bar
   const w = Math.max(R*1.8, t*1.8), yy = -R - t*.55;
   ctx.fillStyle = bg; ctx.fillRect(-w/2 - 1, yy - 1, w + 2, t*.3 + 2); ctx.fillStyle = c; ctx.fillRect(-w/2, yy, w*clamp(u.hp/u.max, 0, 1), t*.3);
   ctx.restore();
 }
-function drawUnit(u, col, fg, bg, ice, line){
-  const { t, gx, gy } = geo, S = M.sides[u.side], x = gx + u.x*t, y = gy + u.y*t, R = t*1.3, c = S.frozen > 0 || u.frz > 0 ? ice : col;
-  ctx.save(); ctx.translate(x, y);
-  if (u.type === 'flak' || u.type === 'mender'){ ctx.globalAlpha = .28; ctx.strokeStyle = c; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(0, 0, (u.type === 'flak' ? 5.4 : 6)*t, 0, 7); ctx.stroke(); ctx.globalAlpha = 1; }
-  ctx.beginPath(); ctx.arc(0, 0, R, 0, 7); ctx.fillStyle = fg; ctx.fill();
-  // health ring: a faint full track with the remaining health over it
-  ctx.lineWidth = Math.max(2.5, t*.3); ctx.strokeStyle = bg; ctx.stroke();
-  ctx.beginPath(); ctx.arc(0, 0, R, -Math.PI/2, -Math.PI/2 + 2*Math.PI*clamp(u.hp/u.max, 0, 1)); ctx.strokeStyle = c; ctx.stroke();
-  const im = pic(u.type, c), sz = R*1.36;
-  if (im){ ctx.save(); if (u.side) ctx.scale(1, -1); ctx.drawImage(im, -sz/2, -sz/2, sz, sz); ctx.restore(); }
-  else { ctx.strokeStyle = c; ctx.lineWidth = t*.3; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, fwd(u.side)*R*.7); ctx.stroke(); }
-  if (u.type === 'sweeper' || u.type === 'spinner'){ ctx.fillStyle = c; ctx.beginPath(); ctx.arc(Math.sin(u.ang)*(R + t*.55), fwd(u.side)*Math.cos(u.ang)*(R + t*.55), t*.24, 0, 7); ctx.fill(); }
-  if (S.over > 0){ ctx.strokeStyle = c; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(0, 0, R + t*.6, 0, 7); ctx.stroke(); }
-  if (u.hit > 0){ ctx.globalAlpha = u.hit*4; ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(0, 0, R, 0, 7); ctx.fill(); ctx.globalAlpha = 1; }
-  if (u.hp < u.max){ // damaged cannons show their health as a number
+/* Every cannon is its own machine: a different body, different barrels, a different size. Local "up" is the way it faces. */
+function drawUnit(u, col, fg, bg, ice){
+  const { t, gx, gy } = geo, S = M.sides[u.side], x = gx + u.x*t, y = gy + u.y*t, R = t*1.3, k = u.type;
+  const c = S.frozen > 0 || u.frz > 0 ? ice : col, d = u.dir || fwd(u.side), grow = 1 + 2.2*Math.max(0, u.born || 0);
+  const TAU = Math.PI*2, lw = Math.max(2, t*.2);
+  ctx.save(); ctx.translate(x, y); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+  if (k === 'flak' || k === 'mender'){ ctx.globalAlpha = .28; ctx.strokeStyle = c; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(0, 0, (k === 'flak' ? 5.4 : 6)*t, 0, 7); ctx.stroke(); ctx.globalAlpha = 1; }
+  ctx.save(); ctx.scale(grow, -d*grow);
+  const hull = () => { ctx.fillStyle = fg; ctx.fill(); ctx.lineWidth = lw; ctx.strokeStyle = bg; ctx.stroke(); };
+  const disc = r => { ctx.beginPath(); ctx.arc(0, 0, r, 0, 7); hull(); };
+  const poly = (n, r, rot = 0) => { ctx.beginPath(); for (let i = 0; i < n; i++){ const a = rot + i*TAU/n; ctx.lineTo(Math.sin(a)*r, -Math.cos(a)*r); } ctx.closePath(); hull(); };
+  const box = (w, h, q) => { rr(-w/2, -h/2, w, h, q); hull(); };
+  const barrel = (ox, len, w, ang = 0) => { ctx.save(); ctx.rotate(ang); rr(ox - w/2, -len, w, len, w*.3); ctx.fillStyle = c; ctx.fill(); ctx.lineWidth = Math.max(1.5, t*.13); ctx.strokeStyle = fg; ctx.stroke(); ctx.restore(); };
+  const dot = (r, ox = 0, oy = 0) => { ctx.beginPath(); ctx.arc(ox, oy, r, 0, 7); ctx.fillStyle = c; ctx.fill(); };
+  const mark = fn => { ctx.strokeStyle = c; ctx.lineWidth = Math.max(1.5, t*.18); ctx.beginPath(); fn(); ctx.stroke(); };
+  if (k === 'sentry'){ barrel(0, R*1.3, R*.44); disc(R*.85); dot(R*.32); }
+  else if (k === 'sweeper'){ barrel(0, R*1.25, R*.34, u.ang); ctx.beginPath(); ctx.arc(0, 0, R*.9, Math.PI, 0); ctx.closePath(); hull(); mark(() => ctx.arc(0, 0, R*1.15, -Math.PI/2 - .95, -Math.PI/2 + .95)); dot(R*.24, 0, -R*.3); }
+  else if (k === 'scatter'){ for (const a of [-.5, 0, .5]) barrel(0, R*1.05, R*.26, a); poly(3, R*1.1, Math.PI); dot(R*.26, 0, R*.1); }
+  else if (k === 'bouncer'){ barrel(0, R*1.2, R*.3, -.785); barrel(0, R*1.2, R*.3, .785); poly(4, R*.95); mark(() => { ctx.moveTo(-R*.35, R*.1); ctx.lineTo(0, -R*.3); ctx.lineTo(R*.35, R*.1); }); }
+  else if (k === 'pike'){ barrel(0, R*1.85, R*.2); poly(6, R*.68); mark(() => { ctx.moveTo(-R*.3, -R*1.5); ctx.lineTo(0, -R*1.95); ctx.lineTo(R*.3, -R*1.5); }); dot(R*.22); }
+  else if (k === 'bastion'){ barrel(0, R*1.55, R*.5); box(R*2.2, R*2.2, R*.22); ctx.strokeStyle = c; ctx.lineWidth = Math.max(1.5, t*.18); rr(-R*.68, -R*.68, R*1.36, R*1.36, R*.12); ctx.stroke(); for (const [ox, oy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) dot(R*.13, ox*R*.86, oy*R*.86); }
+  else if (k === 'twin'){ barrel(-R*.4, R*1.3, R*.3); barrel(R*.4, R*1.3, R*.3); box(R*2.1, R*1.25, R*.5); dot(R*.2, -R*.45, 0); dot(R*.2, R*.45, 0); }
+  else if (k === 'mortar'){ barrel(0, R*1.0, R*.9); disc(R*.98); ctx.strokeStyle = c; ctx.lineWidth = R*.26; ctx.beginPath(); ctx.arc(0, 0, R*.48, 0, 7); ctx.stroke(); }
+  else if (k === 'rattler'){ barrel(0, R*1.6, R*.34); mark(() => { for (const q of [.75, 1.05, 1.35]){ ctx.moveTo(-R*.24, -R*q); ctx.lineTo(R*.24, -R*q); } }); poly(5, R*.78); dot(R*.2); }
+  else if (k === 'flak'){ for (let i = 0; i < 4; i++) barrel(0, R*1.05, R*.2, .785 + i*1.5708); poly(8, R*.82, .39); mark(() => { ctx.moveTo(-R*.3, 0); ctx.lineTo(R*.3, 0); ctx.moveTo(0, -R*.3); ctx.lineTo(0, R*.3); }); }
+  else if (k === 'spinner'){ for (let i = 0; i < 3; i++) barrel(0, R*1.15, R*.26, u.ang + i*2.094); disc(R*.6); dot(R*.24); }
+  else if (k === 'mender'){ disc(R*.95); ctx.fillStyle = c; ctx.fillRect(-R*.16, -R*.58, R*.32, R*1.16); ctx.fillRect(-R*.58, -R*.16, R*1.16, R*.32); }
+  else if (k === 'hunter'){ barrel(0, R*1.4, R*.16); poly(6, R*.95, .52); mark(() => { ctx.arc(0, 0, R*.46, 0, 7); ctx.moveTo(-R*.72, 0); ctx.lineTo(-R*.2, 0); ctx.moveTo(R*.2, 0); ctx.lineTo(R*.72, 0); ctx.moveTo(0, -R*.72); ctx.lineTo(0, -R*.2); ctx.moveTo(0, R*.2); ctx.lineTo(0, R*.72); }); }
+  else if (k === 'rail'){ barrel(-R*.32, R*1.8, R*.17); barrel(R*.32, R*1.8, R*.17); box(R*1.25, R*1.6, R*.2); mark(() => { ctx.moveTo(0, -R*.55); ctx.lineTo(0, R*.55); }); }
+  else { disc(R*.85); dot(R*.3); }
+  if (u.hit > 0){ ctx.globalAlpha = u.hit*4; ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(0, 0, R*1.1, 0, 7); ctx.fill(); ctx.globalAlpha = 1; }
+  ctx.restore();
+  // health: a thin ring just outside the machine, plus a number once it is damaged
+  const hr = R*1.62;
+  ctx.lineWidth = Math.max(2, t*.2); ctx.strokeStyle = bg; ctx.globalAlpha = .55; ctx.beginPath(); ctx.arc(0, 0, hr, 0, 7); ctx.stroke(); ctx.globalAlpha = 1;
+  ctx.strokeStyle = c; ctx.beginPath(); ctx.arc(0, 0, hr, -Math.PI/2, -Math.PI/2 + TAU*clamp(u.hp/u.max, 0, 1)); ctx.stroke();
+  if (S.over > 0){ ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(0, 0, hr + t*.5, 0, 7); ctx.stroke(); }
+  if (u.hp < u.max){
     const size = Math.max(10, Math.round(t*.95)); ctx.font = `800 ${size}px "Nunito Sans", system-ui, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.lineWidth = 3; ctx.lineJoin = 'round'; ctx.strokeStyle = bg; ctx.strokeText(Math.max(0, u.hp), 0, -R - size*.75); ctx.fillStyle = fg; ctx.fillText(Math.max(0, u.hp), 0, -R - size*.75);
+    ctx.lineWidth = 3; ctx.strokeStyle = bg; ctx.strokeText(Math.max(0, u.hp), 0, -hr - size*.7); ctx.fillStyle = fg; ctx.fillText(Math.max(0, u.hp), 0, -hr - size*.7);
   }
   ctx.restore();
 }
@@ -1017,9 +1047,20 @@ function draw(){
   ctx.fillStyle = fg; ctx.beginPath();
   for (let i = 0; i < N; i++) if (M.mine[i]){ const x = X(i) + t/2, y = Y(i) + t/2; ctx.moveTo(x + t*.28, y); ctx.arc(x, y, t*.28, 0, 7); }
   ctx.fill();
-  ctx.fillStyle = '#fff';
-  for (let i = 0; i < N; i++) if (M.flash[i] > 0){ ctx.globalAlpha = M.flash[i]*.42; ctx.fillRect(X(i), Y(i), t, t); }
-  ctx.globalAlpha = 1;
+  // tiles changing hands: the old colour holds, then the new colour pops out from the centre and overshoots a little
+  for (let i = 0; i < N; i++){
+    const fl = M.flash[i]; if (fl <= 0) continue;
+    const o = M.owner[i], pv = M.prev[i];
+    if (o < 2 && pv !== o){
+      const q = 1 - Math.min(1, fl);
+      ctx.fillStyle = col[pv]; ctx.fillRect(X(i), Y(i), t + .5, t + .5);
+      if (q > 0){
+        const e = 1 + 2.4*Math.pow(q - 1, 3) + 1.4*Math.pow(q - 1, 2), sz = t*e, x = X(i) + (t - sz)/2, y = Y(i) + (t - sz)/2;
+        ctx.fillStyle = col[o]; ctx.fillRect(x, y, sz, sz);
+        ctx.fillStyle = '#fff'; ctx.globalAlpha = (1 - q)*.55; ctx.fillRect(x, y, sz, sz); ctx.globalAlpha = 1;
+      }
+    } else { ctx.fillStyle = '#fff'; ctx.globalAlpha = Math.min(1, fl)*.42; ctx.fillRect(X(i), Y(i), t, t); ctx.globalAlpha = 1; }
+  }
   // the front line between the two sides
   ctx.shadowColor = fg; ctx.shadowBlur = 7;
   ctx.strokeStyle = fg; ctx.lineWidth = Math.max(1.5, t*.16); ctx.lineCap = 'round'; ctx.beginPath();
@@ -1036,6 +1077,11 @@ function draw(){
     ctx.strokeStyle = '#fff'; ctx.lineWidth = t*b.w*.3; ctx.stroke(); ctx.globalAlpha = 1;
   }
   ctx.lineWidth = Math.max(1, t*.12);
+  for (const q of M.rings){   // shock ring where a blast lands
+    const k = 1 - q.t/.4, rad = Math.max(.1, q.max*t*(.25 + .75*k));
+    ctx.globalAlpha = clamp(q.t/.4, 0, 1); ctx.strokeStyle = col[q.side]; ctx.lineWidth = Math.max(2, t*.5*(1 - k) + 1); ctx.beginPath(); ctx.arc(gx + q.x*t, gy + q.y*t, rad, 0, 7); ctx.stroke();
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke(); ctx.globalAlpha = 1;
+  }
   ctx.lineCap = 'round';
   for (const b of M.bullets){   // each shot drags a short trail
     const x = gx + b.x*t, y = gy + b.y*t, q = .045*t;
@@ -1069,6 +1115,10 @@ function draw(){
     else if (MOB[id] && !MOB[id].boom){ const w = MOB[id].fly ? MOB[id].rad + .5 : MOB[id].w + .5; ctx.rect(gx + (c + .5 - w)*t, gy, 2*w*t, (r + 1)*t); }
     else ctx.arc(gx + (c + .5)*t, gy + (r + .5)*t, (UNITS[id] && C.r === 1 ? 1.3 : C.r || 1)*t + t*.5, 0, 7);
     ctx.stroke(); ctx.globalAlpha = bad ? .06 : .16; ctx.fill(); ctx.globalAlpha = 1; ctx.setLineDash([]);
+    if (isForce(id)){   // arrow showing which way the piece will face
+      const dn = M.face && M.cur.y < ROWS/2 ? 1 : -1, ax = gx + (c + .5)*t, ay = gy + (r + .5)*t + dn*t*2.6;
+      ctx.beginPath(); ctx.moveTo(ax, ay + dn*t*1.1); ctx.lineTo(ax - t*.8, ay); ctx.lineTo(ax + t*.8, ay); ctx.closePath(); ctx.fillStyle = fg; ctx.fill();
+    }
     if (aiming){ // guide lines so the target stays visible around a finger
       ctx.globalAlpha = .45; ctx.lineWidth = 1; ctx.beginPath();
       ctx.moveTo(gx, gy + (r + .5)*t); ctx.lineTo(gx + W, gy + (r + .5)*t); ctx.moveTo(gx + (c + .5)*t, gy); ctx.lineTo(gx + (c + .5)*t, gy + H);
@@ -1093,16 +1143,17 @@ function hud(){
   $('clock').classList.toggle('low', !M.idle && secs <= 10); $('clock').classList.toggle('surge', !M.idle && secs <= SURGE && secs > 10);
   $('energy').style.width = (A.energy*10) + '%';
   $('energy-n').textContent = Math.floor(A.energy);
-  const key = M.gq.slice(0, HG).join() + '|' + M.fq.slice(0, HF + 1).join() + M.sel + M.idle + M.coach + gunsOf(0).length;
+  const key = M.gq.slice(0, HG).join() + '|' + M.fq.slice(0, HF + 1).join() + M.sel + M.idle + M.coach + gunsOf(0).length + !!M.face;
   if (key !== M.handKey){
     M.handKey = key;
     for (let k = 0; k < HAND; k++){ const id = slot(k), c = CARDS[id]; { const b = $('pow-' + k), keep = b.classList.contains('ready') ? ' ready' : ''; M.shown = M.shown || []; b.className = 'card ' + lookOf(id) + keep; if (M.shown[k] !== id){ M.shown[k] = id; void b.offsetWidth; b.classList.add('in'); } } $('pow-' + k).innerHTML = c ? `${ic(id)}<u>L${(P.rank[id] || 0) + 1}</u><i class="cost">${c.cost}</i><b>${c.name}</b><small>${ROLE[id] || c.kind}</small><span class="meter"><span></span></span>` : ''; $('pow-' + k).setAttribute('aria-label', c ? `${c.name}, ${c.cost} energy. ${c.desc}` : 'Empty'); }
     const sel = CARDS[slot(M.sel)], next = CARDS[M.fq[HF]];
     const coach = ['Step 1 of 5: tap a card on the left. Those are your forces.', 'Step 2 of 5: press on your own ground, drag to aim, let go to place it.', 'Step 3 of 5: now play an effect card from the right.', 'Step 4 of 5: the ring round a cannon is its health. Shots landing near it wear it down.', 'Step 5 of 5: the gold bar is energy. Fall behind and it fills faster.'][M.coach];
     $('foe-name').textContent = M.who.name;
+    $('btn-face').hidden = !(sel && isForce(slot(M.sel))); $('btn-face').textContent = M.face ? 'Aim ▼ back' : 'Aim ▲ ahead';
     $('next-g').innerHTML = M.idle || !M.gq[HG] ? '' : 'Next' + ic(M.gq[HG]); $('next-f').innerHTML = M.idle || !M.fq[HF] ? '' : 'Next' + ic(M.fq[HF]);
     $('hint').classList.toggle('coach', !!coach && !M.idle);
-    $('hint').textContent = M.idle ? '' : coach ? coach : sel ? `${sel.name}: ${sel.desc}. ` + (sel.aim === 'own' ? 'Press on your own ground, drag, let go.' : 'Press on the board, drag, let go.') : `Cannons ${gunsOf(0).length}/${MAXUNITS}. Hold a card to read it.`;
+    $('hint').textContent = M.idle ? '' : coach ? coach : sel ? `${sel.name}: ${sel.desc}. ` + (M.face && isForce(slot(M.sel)) ? 'Facing back: place it on ground you hold in the rival\'s half.' : sel.aim === 'own' ? 'Press on your own ground, drag, let go.' : 'Press on the board, drag, let go.') : `Cannons ${gunsOf(0).length}/${MAXUNITS}. Hold a card to read it.`;
   }
   for (let k = 0; k < HAND; k++){
     const c = CARDS[slot(k)], b = $('pow-' + k), can = c && !M.idle && !M.over && A.lock <= 0 && A.energy >= c.cost;
@@ -1140,6 +1191,7 @@ document.addEventListener('keydown', e => {
   if (mv){ e.preventDefault(); M.cur = { x:clamp(M.cur.x + mv[0], .5, COLS - .5), y:clamp(M.cur.y + mv[1], .5, ROWS - .5) }; }
   else if ((e.key === 'Enter' || e.key === ' ') && M.sel >= 0){ e.preventDefault(); playAt(M.sel, M.cur.x, M.cur.y); }
   else if (e.key >= '1' && e.key <= String(HAND)) power(+e.key - 1);
+  else if (e.key === 'r') M.face = !M.face;
   else if (e.key === 'Escape' || e.key === 'p') pause(!paused);
 });
 let held = false, holdT = 0;
@@ -1156,6 +1208,7 @@ for (let k = 0; k < HAND; k++){
   b.addEventListener('click', () => { if (held){ held = false; return; } power(k); });
   b.addEventListener('contextmenu', e => e.preventDefault());
 }
+$('btn-face').addEventListener('click', () => { if (live()){ M.face = !M.face; tone(520, .05); } });
 function pause(on){
   if (!M || M.idle || M.over) return;
   paused = on; $('dlg-pause').hidden = !on;
@@ -1163,17 +1216,17 @@ function pause(on){
 document.addEventListener('visibilitychange', () => { if (document.hidden) pause(true); });
 
 /* ---------- saving a match in progress ---------- */
-const MKEY = 'flipfire.match5';
+const MKEY = 'flipfire.match6';
 function saveMatch(){
   if (!live() || M.coach < DONE) return;
-  try { localStorage.setItem(MKEY, JSON.stringify({ ...M, level:P.level, owner:Array.from(M.owner), hp:Array.from(M.hp), mine:Array.from(M.mine), tw:Array.from(M.tw), flash:0 })); } catch {}
+  try { localStorage.setItem(MKEY, JSON.stringify({ ...M, prev:0, level:P.level, owner:Array.from(M.owner), hp:Array.from(M.hp), mine:Array.from(M.mine), tw:Array.from(M.tw), flash:0 })); } catch {}
 }
 function clearMatch(){ try { localStorage.removeItem(MKEY); } catch {} }
 function loadMatch(){
   try {
     const d = JSON.parse(localStorage.getItem(MKEY));
     if (!d || d.level !== P.level || d.owner.length !== N || d.over) return false;
-    M = { ...d, owner:Uint8Array.from(d.owner), hp:Uint8Array.from(d.hp), mine:Uint8Array.from(d.mine), tw:Int8Array.from(d.tw), flash:new Float32Array(N), handKey:'', sel:-1 };
+    M = { ...d, prev:Uint8Array.from(d.owner), owner:Uint8Array.from(d.owner), hp:Uint8Array.from(d.hp), mine:Uint8Array.from(d.mine), tw:Int8Array.from(d.tw), flash:new Float32Array(N), handKey:'', sel:-1 };
     return true;
   } catch { return false; }
 }

@@ -15,6 +15,7 @@ An original real-time tile battle in `flipfire.html`; open it in a browser to pl
 
 - The field is a 22 by 36 grid split between you and a rival. Pick a card, press on the board, drag to aim and let go.
 - Cannon cards (14 kinds) build a gun anywhere on your own ground. A cannon has health and keeps firing until the rival shoots it down.
+- Each cannon is drawn as its own machine. With a force selected, the Aim button turns it to face backwards when you place it on ground you hold in the rival's half.
 - Troop cards (Runner, Squad, Brute, Sapper) walk up the field taking tiles; dragon cards (Drake, Frost wyrm, Elder dragon) fly over everything and burn a path.
 - Effect cards (29: strikes, guards, boosts, tricks) happen once.
 - You bring 5 forces (cannons, troops, dragons) and 6 effects, and hold 2 forces and 3 effects at a time. Energy fills over time; the side holding less ground gains it faster.
