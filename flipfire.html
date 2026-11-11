@@ -1,0 +1,548 @@
+<title>Flipfire</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito+Sans:opsz,wght@6..12,500;6..12,700;6..12,800&display=swap">
+<style>
+/* Layout: portrait arcade screen. Share bar and clock on top, tile field in the middle, energy and three powers under the thumb. */
+:root{
+  --bg:#F1F3F1; --panel:#FFFFFF; --fg:#16201D; --muted:#5A6763; --line:#D4DAD7; --a:#12A87C; --b:#DB3F74; --ice:#58B7E8; --gold:#C98A00;
+  --display:"Lilita One","Arial Black",system-ui,sans-serif;
+  --body:"Nunito Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0D1413; --panel:#16201E; --fg:#EDF3F1; --muted:#93A29D; --line:#28342F; --a:#1FC592; --b:#EE5587; --ice:#6CC6F2; --gold:#F2B735; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#0D1413; --panel:#16201E; --fg:#EDF3F1; --muted:#93A29D; --line:#28342F; --a:#1FC592; --b:#EE5587; --ice:#6CC6F2; --gold:#F2B735; color-scheme:dark }
+
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-weight:500;font-size:15px;line-height:1.4;overflow:hidden;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));-webkit-tap-highlight-color:transparent}
+*{box-sizing:border-box}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
+.num{font-variant-numeric:tabular-nums}
+
+.app{height:100%;max-width:520px;margin:0 auto;display:flex;flex-direction:column;gap:8px;padding-block:10px}
+.top{display:flex;align-items:center;gap:10px}
+.mark{font-family:var(--display);font-size:24px;line-height:1;margin:0;letter-spacing:.01em}
+.mark i{font-style:normal;color:var(--a)}
+.meta{margin-left:auto;display:flex;gap:6px;align-items:center}
+.tag{font-weight:800;font-size:13px;padding:5px 10px;border-radius:999px;background:var(--panel);border:1px solid var(--line)}
+.tag.coin{color:var(--gold)}
+.tool{background:none;border:1px solid var(--line);border-radius:999px;padding:5px 11px;font-weight:700;font-size:13px}
+.tool:hover{border-color:var(--fg)}
+
+.hud{display:flex;align-items:center;gap:10px;font-weight:800}
+.share{flex:1;height:14px;border-radius:7px;background:var(--b);overflow:hidden}
+.share span{display:block;height:100%;background:var(--a);width:50%}
+.clock{font-family:var(--display);font-size:20px;min-width:2.2em;text-align:right}
+.field{flex:1 1 auto;min-height:260px;position:relative}
+.field canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:ew-resize}
+
+.tray{display:flex;flex-direction:column;gap:6px}
+.erow{display:flex;align-items:center;gap:8px;font-weight:800;font-size:13px}
+.energy{flex:1;height:8px;border-radius:4px;background:var(--line);overflow:hidden}
+.energy span{display:block;height:100%;width:0;background:var(--gold)}
+.powers{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.pow{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:7px 10px;text-align:left;display:flex;flex-direction:column;min-width:0}
+.pow b{font-weight:800;display:flex;justify-content:space-between;gap:6px}
+.pow b i{font-style:normal;color:var(--gold)}
+.pow span{font-size:12px;color:var(--muted);font-weight:700}
+.pow:disabled{opacity:.42;cursor:default}
+.pow:not(:disabled){border-color:var(--gold)}
+
+.veil{position:fixed;inset:0;background:color-mix(in srgb,var(--bg) 80%,transparent);backdrop-filter:blur(3px);display:grid;place-items:center;z-index:20;
+  padding:max(14px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(14px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.sheet{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:18px;width:100%;max-width:440px;max-height:100%;overflow:auto;display:flex;flex-direction:column;gap:12px}
+.sheet h2{font-family:var(--display);font-weight:400;font-size:24px;line-height:1.1;margin:0;text-wrap:balance}
+.sheet h3{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0}
+.sheet p{margin:0;color:var(--muted)}
+.list{display:flex;flex-direction:column;gap:6px}
+.opt{display:flex;align-items:center;gap:10px;text-align:left;background:none;border:1px solid var(--line);border-radius:12px;padding:8px 12px;min-width:0}
+.opt > div{min-width:0;flex:1}
+.opt b{display:block;font-weight:800}
+.opt small{display:block;color:var(--muted);font-size:12.5px}
+.opt em{font-style:normal;font-weight:800;font-size:13px;white-space:nowrap}
+.opt.sel{border-color:var(--a);box-shadow:inset 0 0 0 1px var(--a)}
+.opt:disabled{opacity:.5;cursor:default}
+.opt:not(:disabled):hover{border-color:var(--fg)}
+.opt.sel:not(:disabled):hover{border-color:var(--a)}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.btn{flex:1 1 auto;border:1px solid var(--line);background:none;border-radius:12px;padding:11px 14px;font-weight:800}
+.btn.go{background:var(--a);border-color:var(--a);color:#06231A;font-family:var(--display);font-size:18px;font-weight:400}
+.btn:hover{border-color:var(--fg)}
+.btn:disabled{opacity:.5;cursor:default}
+</style>
+
+<div class="app">
+  <header class="top">
+    <h1 class="mark">Flip<i>fire</i></h1>
+    <div class="meta">
+      <span class="tag num" id="tag-level">Stage 1</span>
+      <span class="tag coin num" id="tag-coins">0 scrap</span>
+      <button class="tool" id="btn-pause">Pause</button>
+    </div>
+  </header>
+  <div class="hud">
+    <span class="num" id="pct-a">50%</span>
+    <div class="share" aria-hidden="true"><span id="share"></span></div>
+    <span class="num" id="pct-b">50%</span>
+    <span class="clock num" id="clock">60</span>
+  </div>
+  <div class="field" id="field"><canvas id="cv" aria-label="Tile field. Slide to aim your cannon."></canvas></div>
+  <section class="tray" aria-label="Your hand">
+    <div class="erow"><div class="energy" aria-hidden="true"><span id="energy"></span></div><span class="num" id="energy-n">0/10</span></div>
+    <div class="powers">
+      <button class="pow" id="pow-0" disabled></button>
+      <button class="pow" id="pow-1" disabled></button>
+      <button class="pow" id="pow-2" disabled></button>
+    </div>
+  </section>
+</div>
+
+<div class="veil" id="dlg-home">
+  <div class="sheet">
+    <h2 id="home-title">Stage 1</h2>
+    <p id="home-sub">Slide to aim. Your cannon fires on its own and flips every rival tile it hits. Play cards from your hand as energy fills. Hold more of the field when the clock runs out.</p>
+    <h3>Cannon</h3>
+    <div class="list" id="cannons"></div>
+    <h3 id="deck-head">Deck</h3>
+    <div class="list" id="cards"></div>
+    <h3>Workshop</h3>
+    <div class="list" id="upgrades"></div>
+    <div class="row">
+      <button class="btn" id="btn-sound">Sound on</button>
+      <button class="btn go" id="btn-play">Play</button>
+    </div>
+  </div>
+</div>
+
+<div class="veil" id="dlg-over" hidden>
+  <div class="sheet">
+    <h2 id="over-title"></h2>
+    <p id="over-sub"></p>
+    <div class="row">
+      <button class="btn" id="over-home">Workshop</button>
+      <button class="btn go" id="over-next">Next stage</button>
+    </div>
+  </div>
+</div>
+
+<div class="veil" id="dlg-pause" hidden>
+  <div class="sheet">
+    <h2>Paused</h2>
+    <p>Slide or use the arrow keys to aim. Keys 1, 2 and 3 play the cards in your hand.</p>
+    <div class="row">
+      <button class="btn" id="pause-quit">Quit stage</button>
+      <button class="btn go" id="pause-resume">Resume</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+'use strict';
+const $ = id => document.getElementById(id);
+const COLS = 9, ROWS = 14, TIME = 60;
+const CANNONS = {
+  tapper:   { name:'Tapper',   unlock:1, gap:.15, speed:16, desc:'Quick single shots. Easy to steer.' },
+  fork:     { name:'Fork',     unlock:2, gap:.42, speed:14, desc:'Three shots in a fan. Wide, loose.' },
+  lance:    { name:'Lance',    unlock:4, gap:.5,  speed:26, desc:'One bolt that drills four tiles deep.' },
+  mortar:   { name:'Mortar',   unlock:6, gap:.95, speed:9,  desc:'Slow shell that flips a 3 by 3 patch.' },
+  ricochet: { name:'Ricochet', unlock:8, gap:.14, speed:14, desc:'Angled shots that bounce off the walls.' }
+};
+const UPG = {
+  rapid:  { name:'Rapid loader', max:8, desc:'+7% fire rate per rank' },
+  dynamo: { name:'Dynamo',       max:6, desc:'+10% energy flow per rank' },
+  van:    { name:'Vanguard',     max:3, desc:'Start one row further up per rank' }
+};
+const CARDS = {
+  overdrive:{ name:'Overdrive', cost:3, unlock:1, desc:'Double fire rate for 5s' },
+  drill:    { name:'Drill',     cost:3, unlock:1, desc:'Flip 5 tiles deep in your lane' },
+  sentry:   { name:'Sentry',    cost:4, unlock:1, desc:'Drop an auto-turret here for 10s' },
+  plating:  { name:'Plating',   cost:3, unlock:1, desc:'Armour your front two rows' },
+  splash:   { name:'Splash',    cost:4, unlock:1, desc:'Flip a 5 by 3 patch at the front' },
+  jam:      { name:'Jam',       cost:4, unlock:1, desc:'Stall the rival cannon for 4s' },
+  tide:     { name:'Tide',      cost:6, unlock:2, desc:'Push every lane forward 2 tiles' },
+  shield:   { name:'Shield',    cost:3, unlock:3, desc:'Your tiles shrug off shots for 3s' },
+  split:    { name:'Split',     cost:4, unlock:4, desc:'Fire from three lanes for 6s' },
+  decoy:    { name:'Decoy',     cost:2, unlock:5, desc:'Rival aims at a far corner for 5s' },
+  sprinkler:{ name:'Sprinkler', cost:5, unlock:6, desc:'Bouncing auto-turret for 8s' },
+  turncoat: { name:'Turncoat',  cost:5, unlock:7, desc:'Every rival shot in the air turns' },
+  meteor:   { name:'Meteor',    cost:7, unlock:9, desc:'Six blasts land on rival ground' }
+};
+const DECK = 6, MAXE = 10;
+const cost = (k, r) => Math.round(40*(r + 1)*Math.pow(1.45, r));
+
+const store = {
+  get(d){ try { const v = localStorage.getItem('flipfire'); return v ? { ...d, ...JSON.parse(v) } : d; } catch { return d; } },
+  set(v){ try { localStorage.setItem('flipfire', JSON.stringify(v)); } catch {} }
+};
+const P = store.get({ level:1, coins:0, up:{ rapid:0, dynamo:0, van:0 }, cannon:'tapper', sound:true, deck:['overdrive','drill','sentry','plating','splash','jam'] });
+P.deck = (P.deck || []).filter(k => CARDS[k]).slice(0, DECK);
+if (!CANNONS[P.cannon]) P.cannon = 'tapper';
+
+/* ---------- sound ---------- */
+let actx = null, lastTick = 0;
+function tone(f, d = .08, type = 'triangle', v = .05, when = 0){
+  if (!P.sound) return;
+  try {
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    const t = actx.currentTime + when, o = actx.createOscillator(), g = actx.createGain();
+    o.type = type; o.frequency.setValueAtTime(f, t);
+    g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(.0001, t + d);
+    o.connect(g).connect(actx.destination); o.start(t); o.stop(t + d + .02);
+  } catch {}
+}
+function tick(side){ const n = performance.now(); if (n - lastTick < 70) return; lastTick = n; tone(side ? 190 : 520 + Math.random()*120, .04, 'square', .018); }
+
+/* ---------- match ---------- */
+let M = null, paused = false;
+const rivalCannon = n => ['tapper','tapper','fork','tapper','lance','fork','mortar','ricochet','lance','mortar'][(n - 1) % 10];
+function newMatch(idle){
+  const n = P.level, mine = ROWS/2 + P.up.van;
+  const owner = new Uint8Array(COLS*ROWS), hp = new Uint8Array(COLS*ROWS), flash = new Float32Array(COLS*ROWS);
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) owner[r*COLS + c] = r >= ROWS - mine ? 0 : 1;
+  if (n >= 3){
+    let plates = Math.min(22, (n - 2)*3);
+    while (plates-- > 0){ const i = Math.floor(Math.random()*COLS*(ROWS - mine)); hp[i] = 1; }
+  }
+  const queue = P.deck.slice().sort(() => Math.random() - .5);
+  const foe = ['overdrive','sentry'].concat(n >= 5 ? ['splash','plating'] : [], n >= 7 ? ['tide','jam'] : [], n >= 10 ? ['meteor','split'] : []);
+  M = { owner, hp, flash, bullets:[], aux:[], t:TIME, idle:!!idle, over:false, aimT:0, target:COLS/2, queue, foe, foeNext:foe[0], handKey:'',
+    sides:[
+      { x:COLS/2, cd:.4, type:P.cannon, rate:1 + .07*P.up.rapid, flow:.5*(1 + .1*P.up.dynamo), energy:2, over:0, frozen:0, split:0, shield:0, decoy:0, alt:1 },
+      { x:COLS/2, cd:.6, type:rivalCannon(n), rate:Math.min(1.5, .5 + .07*n), flow:n >= 3 ? Math.min(.6, .22 + .03*n) : 0, energy:0, over:0, frozen:0, split:0, shield:0, decoy:0, alt:1 }
+    ] };
+}
+function shoot(side, x, type, T){
+  if (x < 0 || x > COLS) return;
+  const C = CANNONS[type], dir = side ? 1 : -1, y = side ? .01 : ROWS - .01;
+  const b = vx => M.bullets.push({ x:Math.min(COLS - .05, Math.max(.05, x)), y, vx, vy:dir*C.speed, side, pierce:type === 'lance' ? 3 : 0, kind:type });
+  if (type === 'fork'){ b(-4); b(0); b(4); }
+  else if (type === 'ricochet'){ b(T.alt*7); T.alt = -T.alt; }
+  else b(0);
+}
+function fire(side){
+  const S = M.sides[side];
+  shoot(side, S.x, S.type, S);
+  if (S.split > 0){ shoot(side, S.x - 1.5, S.type, S); shoot(side, S.x + 1.5, S.type, S); }
+  S.cd = CANNONS[S.type].gap/(S.rate*(S.over > 0 ? 2 : 1));
+}
+function flip(i, side){
+  M.owner[i] = side; M.hp[i] = 0; M.flash[i] = 1;
+  const S = M.sides[side]; S.energy = Math.min(MAXE, S.energy + .025);
+  tick(side);
+}
+function strike(i, side){ if (M.owner[i] === side) return; if (M.hp[i] > 0){ M.hp[i]--; M.flash[i] = .6; } else flip(i, side); }
+/* Returns true when the bullet is spent. */
+function hit(b, c, r){
+  const i = r*COLS + c;
+  if (M.owner[i] === b.side) return false;
+  if (M.sides[M.owner[i]].shield > 0){ M.flash[i] = .35; return true; }
+  if (M.hp[i] > 0){ M.hp[i]--; M.flash[i] = .6; return true; }
+  flip(i, b.side);
+  if (b.kind === 'mortar'){
+    for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++){
+      const cc = c + dc, rr = r + dr;
+      if ((dc || dr) && cc >= 0 && rr >= 0 && cc < COLS && rr < ROWS) strike(rr*COLS + cc, b.side);
+    }
+    tone(110, .16, 'sine', .05);
+  }
+  return --b.pierce < 0;
+}
+function tide(side){
+  for (let c = 0; c < COLS; c++){
+    let left = 2;
+    for (let k = 0; k < ROWS && left; k++){
+      const r = side ? k : ROWS - 1 - k, i = r*COLS + c;
+      if (M.owner[i] !== side){ flip(i, side); left--; }
+    }
+  }
+  tone(180, .3, 'sawtooth', .04); tone(360, .35, 'triangle', .05, .08);
+}
+const fwd = side => side ? 1 : -1, base = side => side ? 0 : ROWS - 1;
+const lane = S => Math.min(COLS - 1, Math.max(0, Math.floor(S.x)));
+function frontRow(side, c){ for (let k = 0; k < ROWS; k++){ const r = base(side) + fwd(side)*k; if (M.owner[r*COLS + c] !== side) return r; } return -1; }
+function blast(side, c, r){
+  for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++){
+    const cc = c + dc, q = r + dr;
+    if (cc >= 0 && q >= 0 && cc < COLS && q < ROWS) strike(q*COLS + cc, side);
+  }
+}
+function cast(side, id){
+  const S = M.sides[side], O = M.sides[1 - side], c = lane(S), f = fwd(side);
+  if (id === 'overdrive') S.over = 5;
+  else if (id === 'jam') O.frozen = 4;
+  else if (id === 'tide') return tide(side);
+  else if (id === 'shield') S.shield = 3;
+  else if (id === 'split') S.split = 6;
+  else if (id === 'decoy'){ O.decoy = 5; M.target = Math.random() < .5 ? .5 : COLS - .5; }
+  else if (id === 'sentry') M.aux.push({ x:S.x, side, type:'tapper', cd:.2, life:10, gap:.2, alt:1 });
+  else if (id === 'sprinkler') M.aux.push({ x:S.x, side, type:'ricochet', cd:.2, life:8, gap:.17, alt:1 });
+  else if (id === 'drill'){
+    let left = 5;
+    for (let k = 0; k < ROWS && left; k++){ const i = (base(side) + f*k)*COLS + c; if (M.owner[i] !== side){ flip(i, side); left--; } }
+  }
+  else if (id === 'splash'){
+    const r0 = frontRow(side, c);
+    if (r0 >= 0) for (let k = 0; k < 3; k++) for (let dc = -2; dc <= 2; dc++){
+      const cc = c + dc, r = r0 + f*k;
+      if (cc >= 0 && cc < COLS && r >= 0 && r < ROWS) strike(r*COLS + cc, side);
+    }
+  }
+  else if (id === 'plating'){
+    for (let cc = 0; cc < COLS; cc++){
+      let left = 2;
+      for (let k = 0; k < ROWS && left; k++){ const i = (base(1 - side) + fwd(1 - side)*k)*COLS + cc; if (M.owner[i] === side){ M.hp[i] = 1; M.flash[i] = .5; left--; } }
+    }
+  }
+  else if (id === 'turncoat'){ for (const b of M.bullets) if (b.side !== side){ b.side = side; b.vy = -b.vy; } }
+  else if (id === 'meteor'){
+    const foes = []; M.owner.forEach((o, i) => { if (o !== side) foes.push(i); });
+    for (let k = 0; k < 6 && foes.length; k++){ const i = foes[Math.floor(Math.random()*foes.length)]; blast(side, i % COLS, Math.floor(i/COLS)); }
+    tone(90, .3, 'sine', .07);
+  }
+  tone(side ? 240 : 660, .18, 'triangle', .05); tone(side ? 180 : 990, .2, 'sine', .04, .07);
+}
+function power(k){
+  const S = M && M.sides[0];
+  if (!M || M.idle || M.over || paused) return;
+  const id = M.queue[k], card = CARDS[id];
+  if (!card || S.energy < card.cost) return;
+  S.energy -= card.cost;
+  M.queue.splice(k, 1); M.queue.push(id);
+  cast(0, id);
+}
+function share(){ let a = 0; for (const o of M.owner) if (!o) a++; return a/M.owner.length; }
+
+function rival(dt){
+  const R = M.sides[1], n = P.level;
+  if (R.frozen > 0) return;
+  if (R.energy >= CARDS[M.foeNext].cost){
+    R.energy -= CARDS[M.foeNext].cost; cast(1, M.foeNext);
+    M.foeNext = M.foe[Math.floor(Math.random()*M.foe.length)];
+  }
+  M.aimT -= dt;
+  if (M.aimT <= 0 && R.decoy <= 0){
+    M.aimT = .45;
+    let best = 0, bv = -1; const jit = Math.max(.5, 7 - n);
+    for (let c = 0; c < COLS; c++){
+      let k = 0; for (let r = 0; r < ROWS; r++) if (!M.owner[r*COLS + c]) k++;
+      const v = k + Math.random()*jit; if (v > bv){ bv = v; best = c; }
+    }
+    M.target = best + .5;
+  }
+  const sp = (3 + .5*n)*dt, d = M.target - R.x;
+  R.x += Math.abs(d) < sp ? d : Math.sign(d)*sp;
+}
+let keyDir = 0;
+function step(dt){
+  if (!M.idle){ M.t -= dt; }
+  const A = M.sides[0];
+  if (keyDir) A.x = Math.min(COLS - .5, Math.max(.5, A.x + keyDir*9*dt));
+  if (M.idle){ A.x = COLS/2 + Math.sin(performance.now()/900)*3; }
+  rival(dt);
+  M.sides.forEach((S, side) => {
+    for (const k of ['over','split','shield','decoy']) if (S[k] > 0) S[k] -= dt;
+    if (!M.idle) S.energy = Math.min(MAXE, S.energy + S.flow*dt);
+    if (S.frozen > 0){ S.frozen -= dt; return; }
+    S.cd -= dt; if (S.cd <= 0) fire(side);
+  });
+  for (let k = M.aux.length - 1; k >= 0; k--){
+    const a = M.aux[k]; a.life -= dt; a.cd -= dt;
+    if (a.cd <= 0){ shoot(a.side, a.x, a.type, a); a.cd = a.gap; }
+    if (a.life <= 0) M.aux.splice(k, 1);
+  }
+  for (let k = M.bullets.length - 1; k >= 0; k--){
+    const b = M.bullets[k];
+    b.x += b.vx*dt; b.y += b.vy*dt;
+    if (b.x < 0){ b.x = -b.x; b.vx = -b.vx; } else if (b.x > COLS){ b.x = 2*COLS - b.x; b.vx = -b.vx; }
+    const r = Math.floor(b.y), c = Math.min(COLS - 1, Math.max(0, Math.floor(b.x)));
+    if (r < 0 || r >= ROWS || hit(b, c, r)) M.bullets.splice(k, 1);
+  }
+  for (let i = 0; i < M.flash.length; i++) if (M.flash[i] > 0) M.flash[i] = Math.max(0, M.flash[i] - 4*dt);
+  if (!M.idle){
+    const s = share();
+    if (M.t <= 0 || s >= .88 || s <= .12) finish(s);
+  } else if (M.t < TIME - 1e9) M.t = TIME;
+}
+function finish(s){
+  M.over = true;
+  const won = s > .5, pct = Math.round(s*100);
+  const earned = won ? 30 + 6*P.level + Math.round((s - .5)*80) : 8 + Math.round(s*20);
+  P.coins += earned;
+  $('over-title').textContent = won ? (s >= .88 ? 'Clean sweep' : 'Stage cleared') : 'Line lost';
+  $('over-sub').textContent = `You held ${pct}% of the field and salvaged ${earned} scrap.` + (won ? '' : ' Spend it in the workshop and try again.');
+  $('over-next').textContent = won ? 'Next stage' : 'Retry';
+  if (won){ P.level++; [523,659,784,1047].forEach((f, i) => tone(f, .2, 'triangle', .06, i*.1)); }
+  else [392,330,262].forEach((f, i) => tone(f, .24, 'sine', .06, i*.13));
+  const fresh = Object.keys(CANNONS).find(k => CANNONS[k].unlock === P.level && won);
+  if (fresh) $('over-sub').textContent += ` New cannon unlocked: ${CANNONS[fresh].name}.`;
+  const card = Object.keys(CARDS).filter(k => CARDS[k].unlock === P.level && won).map(k => CARDS[k].name);
+  if (card.length) $('over-sub').textContent += ` New card: ${card.join(', ')}.`;
+  store.set(P); chrome();
+  $('dlg-over').hidden = false;
+}
+
+/* ---------- drawing ---------- */
+const cv = $('cv'), ctx = cv.getContext('2d');
+let geo = { t:20, gx:0, gy:0, w:0, h:0, dpr:1 };
+function layout(){
+  const r = $('field').getBoundingClientRect(), dpr = Math.min(window.devicePixelRatio || 1, 3);
+  if (r.width < 10 || r.height < 10) return;
+  cv.width = Math.round(r.width*dpr); cv.height = Math.round(r.height*dpr);
+  const t = Math.min(r.width/COLS, r.height/(ROWS + 2.6));
+  geo = { t, dpr, w:r.width, h:r.height, gx:(r.width - COLS*t)/2, gy:(r.height - (ROWS + 2.6)*t)/2 + 1.3*t };
+}
+function rr(x, y, w, h, q){ ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x, y, w, h, q) : ctx.rect(x, y, w, h); }
+function cannon(side, col, fg, ice){
+  const S = M.sides[side], { t, gx, gy } = geo, dir = side ? 1 : -1;
+  const x = gx + S.x*t, y = side ? gy - .62*t : gy + ROWS*t + .62*t;
+  ctx.save(); ctx.translate(x, y); ctx.scale(1, -dir);
+  const c = S.frozen > 0 ? ice : col;
+  ctx.fillStyle = c;
+  const barrel = (ang, w, len) => { ctx.save(); ctx.rotate(ang); rr(-w/2, 0, w, len, w*.3); ctx.fill(); ctx.restore(); };
+  if (S.type === 'fork'){ barrel(-.45, .2*t, .62*t); barrel(0, .2*t, .68*t); barrel(.45, .2*t, .62*t); }
+  else if (S.type === 'lance') barrel(0, .16*t, .86*t);
+  else if (S.type === 'mortar') barrel(0, .5*t, .52*t);
+  else if (S.type === 'ricochet'){ barrel(-.5, .2*t, .66*t); barrel(.5, .2*t, .66*t); }
+  else barrel(0, .26*t, .64*t);
+  ctx.fillStyle = fg; rr(-.48*t, -.34*t, .96*t, .5*t, .2*t); ctx.fill();
+  ctx.fillStyle = c; ctx.beginPath(); ctx.arc(0, -.09*t, .13*t, 0, 7); ctx.fill();
+  if (S.over > 0){ ctx.strokeStyle = c; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, -.05*t, .7*t, 0, 7); ctx.stroke(); }
+  if (S.shield > 0){ ctx.strokeStyle = ice; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, -.05*t, .84*t, 0, 7); ctx.stroke(); }
+  ctx.restore();
+}
+function draw(){
+  const st = getComputedStyle(document.documentElement), v = n => st.getPropertyValue(n).trim();
+  const col = [v('--a'), v('--b')], fg = v('--fg'), bg = v('--bg'), ice = v('--ice');
+  const { t, gx, gy, dpr } = geo, g = Math.max(1, t*.05);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, geo.w, geo.h);
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++){
+    const i = r*COLS + c, x = gx + c*t + g/2, y = gy + r*t + g/2, s = t - g;
+    ctx.fillStyle = col[M.owner[i]]; rr(x, y, s, s, t*.16); ctx.fill();
+    if (M.hp[i] > 0){ ctx.strokeStyle = fg; ctx.lineWidth = Math.max(1.5, t*.09); rr(x + t*.16, y + t*.16, s - t*.32, s - t*.32, t*.08); ctx.stroke(); }
+    if (M.flash[i] > 0){ ctx.globalAlpha = M.flash[i]*.7; ctx.fillStyle = '#fff'; rr(x, y, s, s, t*.16); ctx.fill(); ctx.globalAlpha = 1; }
+  }
+  for (const b of M.bullets){
+    const x = gx + b.x*t, y = gy + b.y*t, rad = (b.kind === 'mortar' ? .26 : .13)*t;
+    ctx.fillStyle = bg; ctx.strokeStyle = fg; ctx.lineWidth = Math.max(1.5, t*.07);
+    ctx.beginPath();
+    if (b.kind === 'lance') ctx.ellipse(x, y, rad*.8, rad*2.6, 0, 0, 7); else ctx.arc(x, y, rad, 0, 7);
+    ctx.fill(); ctx.stroke();
+  }
+  for (const a of M.aux){
+    const x = gx + a.x*t, y = a.side ? gy - .3*t : gy + ROWS*t + .3*t;
+    ctx.globalAlpha = Math.min(1, a.life/1.5);
+    ctx.fillStyle = fg; rr(x - .24*t, y - .2*t, .48*t, .4*t, .12*t); ctx.fill();
+    ctx.fillStyle = col[a.side]; ctx.beginPath(); ctx.arc(x, y, .1*t, 0, 7); ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+  for (const side of [0, 1]) if (M.sides[side].shield > 0){
+    ctx.strokeStyle = ice; ctx.lineWidth = 3; ctx.globalAlpha = .9; ctx.beginPath();
+    for (let c = 0; c < COLS; c++){ const r = frontRow(1 - side, c); if (r < 0) continue; const y = gy + (side ? r : r + 1)*t; ctx.moveTo(gx + c*t + 2, y); ctx.lineTo(gx + (c + 1)*t - 2, y); }
+    ctx.stroke(); ctx.globalAlpha = 1;
+  }
+  cannon(0, col[0], fg, ice); cannon(1, col[1], fg, ice);
+}
+function hud(){
+  const s = share(), pa = Math.round(s*100), A = M.sides[0];
+  $('share').style.width = (s*100) + '%';
+  $('pct-a').textContent = pa + '%'; $('pct-b').textContent = (100 - pa) + '%';
+  $('clock').textContent = Math.max(0, Math.ceil(M.t));
+  $('energy').style.width = (A.energy*10) + '%';
+  $('energy-n').textContent = Math.floor(A.energy) + '/' + MAXE;
+  const key = M.queue.slice(0, 3).join();
+  if (key !== M.handKey){
+    M.handKey = key;
+    for (let k = 0; k < 3; k++){ const c = CARDS[M.queue[k]]; $('pow-' + k).innerHTML = c ? `<b>${c.name}<i>${c.cost}</i></b><span>${c.desc}</span>` : ''; }
+  }
+  for (let k = 0; k < 3; k++){ const c = CARDS[M.queue[k]]; $('pow-' + k).disabled = !c || M.idle || M.over || A.energy < c.cost; }
+}
+let last = 0;
+function frame(now){
+  const dt = Math.min(.033, (now - last)/1000 || 0); last = now;
+  if (M && !M.over && !paused) step(dt);
+  if (M){ draw(); hud(); }
+  requestAnimationFrame(frame);
+}
+
+/* ---------- input ---------- */
+function aim(e){
+  if (!M || M.idle || M.over || paused) return;
+  const r = cv.getBoundingClientRect();
+  M.sides[0].x = Math.min(COLS - .5, Math.max(.5, (e.clientX - r.left - geo.gx)/geo.t));
+}
+cv.addEventListener('pointerdown', e => { try { cv.setPointerCapture(e.pointerId); } catch {} aim(e); });
+cv.addEventListener('pointermove', aim);
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowLeft' || e.key === 'a') keyDir = -1;
+  else if (e.key === 'ArrowRight' || e.key === 'd') keyDir = 1;
+  else if (e.key >= '1' && e.key <= '3') power(+e.key - 1);
+  else if (e.key === 'Escape' || e.key === 'p') pause(!paused);
+});
+document.addEventListener('keyup', e => { if (['ArrowLeft','ArrowRight','a','d'].includes(e.key)) keyDir = 0; });
+[0, 1, 2].forEach(k => $('pow-' + k).addEventListener('click', () => power(k)));
+function pause(on){
+  if (!M || M.idle || M.over) return;
+  paused = on; $('dlg-pause').hidden = !on;
+}
+document.addEventListener('visibilitychange', () => { if (document.hidden) pause(true); });
+
+/* ---------- workshop ---------- */
+function chrome(){
+  $('tag-level').textContent = 'Stage ' + P.level;
+  $('tag-coins').textContent = P.coins + ' scrap';
+  $('btn-sound').textContent = P.sound ? 'Sound on' : 'Sound off';
+}
+function home(){
+  chrome();
+  $('home-title').textContent = 'Stage ' + P.level;
+  const foe = CANNONS[rivalCannon(P.level)].name;
+  $('home-sub').textContent = P.level === 1
+    ? 'Slide to aim. Your cannon fires on its own and flips every rival tile it hits. Play cards from your hand as energy fills. Hold more of the field when the clock runs out.'
+    : `The rival brings a ${foe}` + (P.level >= 3 ? ', plated tiles that take two hits, and cards of its own.' : '.');
+  $('deck-head').textContent = `Deck · ${P.deck.length} of ${DECK} chosen`;
+  $('cards').innerHTML = Object.entries(CARDS).map(([k, c]) => {
+    const open = P.level >= c.unlock, on = P.deck.includes(k);
+    return `<button class="opt${on ? ' sel' : ''}" data-card="${k}" ${open && (on || P.deck.length < DECK) ? '' : 'disabled'}><div><b>${c.name} · ${c.cost}</b><small>${c.desc}</small></div><em>${!open ? 'Stage ' + c.unlock : on ? 'In deck' : 'Add'}</em></button>`;
+  }).join('');
+  $('btn-play').disabled = P.deck.length !== DECK;
+  $('btn-play').textContent = P.deck.length === DECK ? 'Play' : `Pick ${DECK - P.deck.length} more`;
+  $('cannons').innerHTML = Object.entries(CANNONS).map(([k, c]) => {
+    const open = P.level >= c.unlock;
+    return `<button class="opt${P.cannon === k ? ' sel' : ''}" data-cannon="${k}" ${open ? '' : 'disabled'}><div><b>${c.name}</b><small>${c.desc}</small></div><em>${open ? (P.cannon === k ? 'Fitted' : 'Fit') : 'Stage ' + c.unlock}</em></button>`;
+  }).join('');
+  $('upgrades').innerHTML = Object.entries(UPG).map(([k, u]) => {
+    const r = P.up[k], full = r >= u.max, c = cost(k, r);
+    return `<button class="opt" data-up="${k}" ${full || P.coins < c ? 'disabled' : ''}><div><b>${u.name} · rank ${r}/${u.max}</b><small>${u.desc}</small></div><em class="num">${full ? 'Maxed' : c + ' scrap'}</em></button>`;
+  }).join('');
+  $('dlg-over').hidden = true; $('dlg-pause').hidden = true; $('dlg-home').hidden = false;
+  paused = false; newMatch(true);
+}
+$('cannons').addEventListener('click', e => { const b = e.target.closest('[data-cannon]'); if (!b || b.disabled) return; P.cannon = b.dataset.cannon; store.set(P); tone(520, .06); home(); });
+$('cards').addEventListener('click', e => {
+  const b = e.target.closest('[data-card]'); if (!b || b.disabled) return;
+  const k = b.dataset.card, at = P.deck.indexOf(k);
+  if (at >= 0) P.deck.splice(at, 1); else if (P.deck.length < DECK) P.deck.push(k);
+  store.set(P); tone(520, .06);
+  const top = document.querySelector('#dlg-home .sheet').scrollTop; home(); document.querySelector('#dlg-home .sheet').scrollTop = top;
+});
+$('upgrades').addEventListener('click', e => {
+  const b = e.target.closest('[data-up]'); if (!b || b.disabled) return;
+  const k = b.dataset.up, c = cost(k, P.up[k]); if (P.coins < c) return;
+  P.coins -= c; P.up[k]++; store.set(P); tone(700, .1); tone(1050, .12, 'triangle', .05, .07); home();
+});
+function play(){ if (P.deck.length !== DECK) return; $('dlg-home').hidden = true; $('dlg-over').hidden = true; paused = false; newMatch(false); tone(440, .1); }
+$('btn-play').addEventListener('click', play);
+$('over-next').addEventListener('click', play);
+$('over-home').addEventListener('click', home);
+$('btn-sound').addEventListener('click', () => { P.sound = !P.sound; store.set(P); chrome(); tone(660, .1); });
+$('btn-pause').addEventListener('click', () => pause(true));
+$('pause-resume').addEventListener('click', () => pause(false));
+$('pause-quit').addEventListener('click', home);
+
+new ResizeObserver(layout).observe($('field'));
+layout(); home(); requestAnimationFrame(frame);
+})();
+</script>
