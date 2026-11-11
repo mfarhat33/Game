@@ -1,0 +1,645 @@
+<title>Inkfront</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=Figtree:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one-screen board game. Slim header, score strip, hex board filling the middle, pigment tray pinned under it. */
+:root{
+  --bg:#EDF0F4; --panel:#FFFFFF; --fg:#131722; --muted:#586174; --line:#D3D9E2; --stone:#BFC6D1; --accent:#3F6FF0;
+  --p0:#D63F4A; --p1:#F0B429; --p2:#1FA67A; --p3:#3F6FF0; --p4:#8E4BD6; --p5:#F282B4;
+  --display:"Unbounded","Arial Black",system-ui,sans-serif;
+  --body:"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0E1117; --panel:#171B24; --fg:#EEF1F6; --muted:#98A2B5; --line:#2A313E; --stone:#2C3340; --accent:#7C9CFF; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#0E1117; --panel:#171B24; --fg:#EEF1F6; --muted:#98A2B5; --line:#2A313E; --stone:#2C3340; --accent:#7C9CFF; color-scheme:dark }
+
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.4;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  -webkit-tap-highlight-color:transparent;overflow:hidden}
+*{box-sizing:border-box}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,label:has(input:focus-visible){outline:2px solid var(--accent);outline-offset:2px}
+
+.app{height:100%;max-width:620px;margin:0 auto;display:flex;flex-direction:column;gap:10px;padding-block:12px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.mark{font-family:var(--display);font-weight:700;font-size:20px;letter-spacing:-.02em;margin:0}
+.mark i{font-style:normal;color:var(--accent)}
+.tools{display:flex;gap:6px}
+.tool{background:none;border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-weight:600;font-size:13px}
+.tool:hover{border-color:var(--fg)}
+
+.score{display:flex;flex-direction:column;gap:6px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{flex:1 1 0;min-width:0;display:flex;align-items:center;gap:7px;padding:6px 8px;border-radius:10px;border:1px solid transparent}
+.chip.on{background:var(--panel);border-color:var(--line)}
+.sw{width:16px;height:16px;border-radius:5px;flex:none}
+.chip b{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.chip .n{margin-left:auto;font-variant-numeric:tabular-nums;font-weight:600}
+.pips{display:flex;gap:2px;flex:none}
+.pips span{width:5px;height:5px;border-radius:50%;background:var(--fg)}
+.bar{display:flex;height:6px;border-radius:3px;overflow:hidden;background:var(--line)}
+.bar span{transition:flex-grow .35s ease}
+.status{margin:0;font-weight:600;min-height:1.4em}
+.status small{font-weight:500;color:var(--muted);font-size:inherit}
+
+.board{flex:1 1 auto;min-height:240px;position:relative}
+.board canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:manipulation}
+
+.tray{display:flex;flex-direction:column;gap:8px}
+.pigs{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
+.pig{background:none;border:0;padding:0;display:flex;flex-direction:column;align-items:center;gap:3px}
+.pig .blob{width:100%;height:44px;border-radius:12px;display:grid;place-items:center;font-family:var(--display);font-size:13px;color:rgba(10,12,20,.55);transition:transform .12s}
+.pig:not(:disabled):hover .blob{transform:translateY(-2px)}
+.pig:not(:disabled):active .blob{transform:scale(.94)}
+.pig .g{font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--muted)}
+.pig:disabled{cursor:default}
+.pig:disabled .blob{opacity:.22}
+.powers{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.pow{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px 12px;text-align:left;display:flex;flex-direction:column}
+.pow b{font-weight:700}
+.pow span{font-size:12.5px;color:var(--muted)}
+.pow:disabled{opacity:.45;cursor:default}
+.pow:not(:disabled):hover{border-color:var(--fg)}
+.pow.armed{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+
+.veil{position:fixed;inset:0;background:color-mix(in srgb,var(--bg) 78%,transparent);backdrop-filter:blur(3px);display:grid;place-items:center;z-index:20;
+  padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.sheet{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:20px;width:100%;max-width:430px;max-height:100%;overflow:auto;display:flex;flex-direction:column;gap:14px}
+.sheet h2{font-family:var(--display);font-weight:700;font-size:18px;letter-spacing:-.01em;margin:0;text-wrap:balance}
+.sheet p{margin:0;color:var(--muted)}
+.sheet ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px}
+.sheet li b{color:var(--fg)}
+.field{display:flex;flex-direction:column;gap:5px;border:0;padding:0;margin:0;min-width:0}
+.field legend{padding:0;font-size:12px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:5px}
+.seg{display:flex;gap:4px;background:var(--bg);border-radius:11px;padding:3px}
+.seg label{flex:1 1 0;min-width:0;text-align:center;padding:7px 4px;border-radius:8px;font-weight:600;cursor:pointer;font-size:14px}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg label:has(input:checked){background:var(--panel);box-shadow:0 0 0 1px var(--line)}
+.note{font-size:13px}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.btn{flex:1 1 auto;border:1px solid var(--line);background:none;border-radius:11px;padding:10px 14px;font-weight:700}
+.btn.go{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.btn:hover{border-color:var(--fg)}
+.rank{display:flex;flex-direction:column;gap:6px;list-style:none;padding:0;margin:0}
+.rank li{display:flex;align-items:center;gap:8px;font-weight:600}
+.rank .n{margin-left:auto;font-variant-numeric:tabular-nums}
+.check{display:flex;align-items:center;gap:8px;font-weight:600;cursor:pointer}
+@media (prefers-reduced-motion: reduce){ *{transition:none!important} }
+</style>
+
+<div class="app">
+  <header class="top">
+    <h1 class="mark">Ink<i>front</i></h1>
+    <div class="tools">
+      <button class="tool" id="btn-sound" aria-pressed="true">Sound on</button>
+      <button class="tool" id="btn-help">Rules</button>
+      <button class="tool" id="btn-new">New game</button>
+    </div>
+  </header>
+
+  <section class="score" aria-label="Score">
+    <div class="chips" id="chips"></div>
+    <div class="bar" id="bar"></div>
+    <p class="status" id="status" aria-live="polite"></p>
+  </section>
+
+  <div class="board" id="board"><canvas id="cv" aria-label="Game board"></canvas></div>
+
+  <section class="tray" aria-label="Your move">
+    <div class="pigs" id="pigs"></div>
+    <div class="powers">
+      <button class="pow" id="btn-surge"><b>Surge</b><span id="surge-sub">2 charges · move twice</span></button>
+      <button class="pow" id="btn-burst"><b>Burst</b><span id="burst-sub">3 charges · take the whole rim</span></button>
+    </div>
+  </section>
+</div>
+
+<div class="veil" id="dlg-setup" hidden>
+  <form class="sheet" id="setup">
+    <h2>New game</h2>
+    <fieldset class="field"><legend>Mode</legend>
+      <div class="seg">
+        <label><input type="radio" name="mode" id="mode-skirmish" value="skirmish" checked>Skirmish</label>
+        <label><input type="radio" name="mode" id="mode-daily" value="daily">Daily board</label>
+        <label><input type="radio" name="mode" id="mode-pass" value="pass">Pass &amp; play</label>
+      </div>
+      <p class="note" id="mode-note"></p>
+    </fieldset>
+    <fieldset class="field" id="f-size"><legend>Board</legend>
+      <div class="seg">
+        <label><input type="radio" name="size" id="size-s" value="s">Small</label>
+        <label><input type="radio" name="size" id="size-m" value="m" checked>Medium</label>
+        <label><input type="radio" name="size" id="size-l" value="l">Large</label>
+      </div>
+    </fieldset>
+    <fieldset class="field" id="f-opp"><legend>Rivals</legend>
+      <div class="seg">
+        <label><input type="radio" name="opp" id="opp-1" value="1" checked>One</label>
+        <label><input type="radio" name="opp" id="opp-2" value="2">Two</label>
+        <label><input type="radio" name="opp" id="opp-3" value="3">Three</label>
+      </div>
+    </fieldset>
+    <fieldset class="field" id="f-lvl"><legend>Rival skill</legend>
+      <div class="seg">
+        <label><input type="radio" name="lvl" id="lvl-0" value="0">Loose</label>
+        <label><input type="radio" name="lvl" id="lvl-1" value="1" checked>Steady</label>
+        <label><input type="radio" name="lvl" id="lvl-2" value="2">Sharp</label>
+      </div>
+    </fieldset>
+    <label class="check"><input type="checkbox" id="opt-marks"> Number the pigments on the board</label>
+    <p class="note" id="stats-line"></p>
+    <div class="row">
+      <button type="button" class="btn" id="setup-cancel">Back</button>
+      <button type="submit" class="btn go">Start</button>
+    </div>
+  </form>
+</div>
+
+<div class="veil" id="dlg-help" hidden>
+  <div class="sheet">
+    <h2>How Inkfront works</h2>
+    <ul>
+      <li><b>Pick a pigment.</b> Your whole territory turns that colour and soaks up every touching tile of the same colour, and every tile chained to those.</li>
+      <li><b>No sharing.</b> You can't pick a pigment any side is wearing right now. Tap a pigment below, tap a tile on the board, or press 1–6.</li>
+      <li><b>Wells</b> are the tiles with a dark dot. Each one you soak up gives a charge, up to five.</li>
+      <li><b>Surge</b> costs 2 charges and lets you move twice. <b>Burst</b> costs 3 and takes every free tile on your rim, whatever its colour.</li>
+      <li><b>Slate</b> tiles are grey and can't be taken. Use them as walls.</li>
+      <li><b>Winning.</b> When every free tile is taken or sealed off behind one side, the side holding the most tiles wins.</li>
+    </ul>
+    <div class="row"><button class="btn go" id="help-close">Got it</button></div>
+  </div>
+</div>
+
+<div class="veil" id="dlg-over" hidden>
+  <div class="sheet">
+    <h2 id="over-title"></h2>
+    <p id="over-sub"></p>
+    <ol class="rank" id="over-rank"></ol>
+    <div class="row">
+      <button class="btn" id="over-view">View board</button>
+      <button class="btn" id="over-again">Same board</button>
+      <button class="btn go" id="over-new">New board</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+'use strict';
+const $ = id => document.getElementById(id);
+const SIZES = { s:[9,9,4], m:[13,13,6], l:[17,17,9] };
+const PIG = ['Madder','Orpiment','Viridian','Ultramarine','Tyrian','Cochineal'];
+const RIVALS = ['Rook','Wren','Finch'];
+const SQ3 = Math.sqrt(3), STEP = 38, DUR = 260;
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ---------- storage ---------- */
+const store = {
+  get(k, d){ try { const v = localStorage.getItem('inkfront.'+k); return v ? JSON.parse(v) : d; } catch { return d; } },
+  set(k, v){ try { localStorage.setItem('inkfront.'+k, JSON.stringify(v)); } catch {} }
+};
+let stats = store.get('stats', { played:0, won:0, streak:0, best:0, daily:{} });
+let prefs = store.get('prefs', { sound:true, marks:false, mode:'skirmish', size:'m', opp:1, lvl:1 });
+
+/* ---------- sound ---------- */
+let actx = null;
+function tone(f, d = .09, type = 'triangle', v = .06, when = 0){
+  if (!prefs.sound) return;
+  try {
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    const t = actx.currentTime + when, o = actx.createOscillator(), g = actx.createGain();
+    o.type = type; o.frequency.setValueAtTime(f, t);
+    g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(.0001, t + d);
+    o.connect(g).connect(actx.destination); o.start(t); o.stop(t + d + .02);
+  } catch {}
+}
+const sfx = {
+  take(n){ const k = Math.min(n, 8); for (let i = 0; i < Math.max(1, Math.ceil(k/2)); i++) tone(330 + i*70, .08, 'triangle', .05, i*.05); },
+  dud(){ tone(150, .12, 'sine', .05); },
+  well(){ tone(880, .16, 'sine', .05, .05); tone(1320, .2, 'sine', .04, .13); },
+  power(){ tone(220, .2, 'sawtooth', .035); tone(440, .25, 'triangle', .05, .08); },
+  win(){ [523,659,784,1047].forEach((f,i) => tone(f, .22, 'triangle', .06, i*.11)); },
+  lose(){ [392,330,262].forEach((f,i) => tone(f, .25, 'sine', .06, i*.14)); }
+};
+
+/* ---------- board maths ---------- */
+function rng(seed){ let a = seed >>> 0; return () => { a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const EVEN = [[1,0],[0,1],[-1,1],[-1,0],[-1,-1],[0,-1]];   // E, SE, SW, W, NW, NE
+const ODD  = [[1,0],[1,1],[0,1],[-1,0],[0,-1],[1,-1]];
+function neighbours(cols, rows){
+  const nb = [];
+  for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++){
+    nb.push((r & 1 ? ODD : EVEN).map(([dc, dr]) => {
+      const cc = c + dc, rr = r + dr;
+      return cc < 0 || rr < 0 || cc >= cols || rr >= rows ? -1 : rr*cols + cc;
+    }));
+  }
+  return nb;
+}
+
+let G = null;          // live game
+let nb = [];           // neighbour table for G
+let gameId = 0;        // invalidates stale timers
+let locked = false;
+const anim = new Map();
+
+/* Tiles p would take by playing colour c. burst: the whole rim seeds the flood. Returns [index, depth] pairs. */
+function reach(S, p, c, burst){
+  const N = S.owner.length, seen = new Uint8Array(N), out = [];
+  let q = [];
+  for (let i = 0; i < N; i++){
+    if (S.owner[i] !== p) continue;
+    for (const j of nb[i]){
+      if (j < 0 || seen[j] || S.owner[j] >= 0 || S.kind[j] === 1) continue;
+      if (burst || S.color[j] === c){ seen[j] = 1; q.push(j); }
+    }
+  }
+  let d = 0;
+  while (q.length){
+    const next = [];
+    for (const i of q){
+      out.push([i, d]);
+      for (const j of nb[i]){
+        if (j < 0 || seen[j] || S.owner[j] >= 0 || S.kind[j] === 1 || S.color[j] !== c) continue;
+        seen[j] = 1; next.push(j);
+      }
+    }
+    q = next; d++;
+  }
+  return out;
+}
+const legal = (S, c) => !S.pcol.includes(c);
+const worth = (S, cells) => cells.reduce((s, [i]) => s + (S.kind[i] === 2 ? 3 : 1), 0);
+
+function makeGame(cfg, seed){
+  const [cols, rows, wells] = SIZES[cfg.size];
+  const N = cols*rows, np = cfg.players.length;
+  nb = neighbours(cols, rows);
+  const homes = [ (rows-1)*cols, cols-1, 0, N-1 ].slice(0, np);
+  const rand = rng(seed);
+  let color, kind;
+  for (let attempt = 0; attempt < 60; attempt++){
+    color = Array.from({ length:N }, () => Math.floor(rand()*6));
+    kind = new Array(N).fill(0);
+    const safe = new Set();
+    homes.forEach(h => { safe.add(h); nb[h].forEach(j => j >= 0 && safe.add(j)); });
+    const free = [...Array(N).keys()].filter(i => !safe.has(i));
+    for (let i = free.length - 1; i > 0; i--){ const j = Math.floor(rand()*(i+1)); [free[i], free[j]] = [free[j], free[i]]; }
+    const stones = Math.round(N*.065);
+    free.slice(0, stones).forEach(i => kind[i] = 1);
+    free.slice(stones, stones + wells).forEach(i => kind[i] = 2);
+    // every playable tile must be reachable
+    const seen = new Uint8Array(N); let q = [homes[0]], n = 1; seen[homes[0]] = 1;
+    while (q.length){ const i = q.pop(); for (const j of nb[i]) if (j >= 0 && !seen[j] && kind[j] !== 1){ seen[j] = 1; n++; q.push(j); } }
+    if (n === N - stones) break;
+  }
+  const order = [0,1,2,3,4,5];
+  for (let i = 5; i > 0; i--){ const j = Math.floor(rand()*(i+1)); [order[i], order[j]] = [order[j], order[i]]; }
+  const g = {
+    cfg, seed, cols, rows, color, kind, owner:new Array(N).fill(-1), homes,
+    pcol:order.slice(0, np), players:cfg.players.map(p => ({ ...p, charges:0, count:0 })),
+    turn:0, extra:0, stall:0, over:false, playable:kind.filter(k => k !== 1).length
+  };
+  homes.forEach((h, p) => { g.owner[h] = p; g.color[h] = g.pcol[p]; });
+  homes.forEach((h, p) => reach(g, p, g.pcol[p], false).forEach(([i]) => g.owner[i] = p));
+  count(g);
+  return g;
+}
+function count(g){ g.players.forEach(p => p.count = 0); g.owner.forEach(o => { if (o >= 0) g.players[o].count++; }); }
+
+/* ---------- rivals ---------- */
+function think(S, p){
+  const lvl = S.players[p].lvl, P = S.players[p];
+  const opts = [];
+  for (let c = 0; c < 6; c++) if (legal(S, c)) opts.push({ c, cells:reach(S, p, c, false) });
+  opts.forEach(o => o.v = worth(S, o.cells));
+  if (lvl === 0){
+    const good = opts.filter(o => o.v > 0), pool = good.length ? good : opts;
+    return { c:pool[Math.floor(Math.random()*pool.length)].c };
+  }
+  if (lvl === 2){
+    const np = S.players.length, foe = (p + 1) % np;
+    for (const o of opts){
+      const T = { owner:S.owner.slice(), color:S.color, kind:S.kind, pcol:S.pcol.slice() };
+      o.cells.forEach(([i]) => T.owner[i] = p); T.pcol[p] = o.c;
+      let mine = 0, theirs = 0;
+      for (let c = 0; c < 6; c++){
+        if (c !== o.c) mine = Math.max(mine, worth(T, reach(T, p, c, false)));
+        if (legal(T, c)) theirs = Math.max(theirs, worth(T, reach(T, foe, c, false)));
+      }
+      o.v = o.v + .5*mine - .6*theirs;
+    }
+  }
+  opts.sort((a, b) => b.v - a.v || Math.random() - .5);
+  const best = opts[0], raw = worth(S, best.cells);
+  if (P.charges >= 3){
+    const b = worth(S, reach(S, p, S.pcol[p], true));
+    if (b > raw + 1) return { burst:true };
+  }
+  if (lvl === 2 && P.charges >= 2 && P.charges < 5 && raw >= 4 && S.extra === 0) return { c:best.c, surge:true };
+  if (lvl === 2 && P.charges >= 5 && S.extra === 0) return { c:best.c, surge:true };
+  return { c:best.c };
+}
+
+/* ---------- turn flow ---------- */
+function play(move){
+  const p = G.turn, P = G.players[p];
+  const c = move.burst ? G.pcol[p] : move.c;
+  const cells = reach(G, p, c, !!move.burst);
+  if (move.burst){ P.charges -= 3; sfx.power(); }
+  const now = performance.now();
+  let wells = 0;
+  for (const [i, d] of cells){
+    anim.set(i, { t0: now + (reduce ? 0 : d*STEP), from:G.color[i], well:G.kind[i] === 2 });
+    G.owner[i] = p;
+    if (G.kind[i] === 2) wells++;
+  }
+  G.pcol[p] = c;
+  P.charges = Math.min(5, P.charges + wells);
+  G.stall = cells.length ? 0 : G.stall + 1;
+  if (!move.burst) cells.length ? sfx.take(cells.length) : sfx.dud();
+  if (wells) sfx.well();
+  count(G);
+  if (finished()){ endGame(); return; }
+  if (G.extra > 0) G.extra--; else G.turn = (G.turn + 1) % G.players.length;
+  afterTurn();
+}
+function afterTurn(){
+  save(); render(); kick();
+  const P = G.players[G.turn];
+  if (!P.human){
+    locked = true; render();
+    const id = gameId;
+    setTimeout(() => {
+      if (id !== gameId || G.over) return;
+      const m = think(G, G.turn);
+      if (m.surge){ P.charges -= 2; G.extra++; sfx.power(); }
+      locked = false;
+      play(m);
+    }, reduce ? 250 : 620);
+  } else { locked = false; render(); }
+}
+/* Over when no free tile is left, or every free pocket touches one side only (that side gets it). */
+function finished(){
+  const N = G.owner.length, seen = new Uint8Array(N), pockets = [];
+  for (let s = 0; s < N; s++){
+    if (seen[s] || G.owner[s] >= 0 || G.kind[s] === 1) continue;
+    const cells = [], sides = new Set(); let q = [s]; seen[s] = 1;
+    while (q.length){
+      const i = q.pop(); cells.push(i);
+      for (const j of nb[i]){
+        if (j < 0 || G.kind[j] === 1) continue;
+        if (G.owner[j] >= 0) sides.add(G.owner[j]);
+        else if (!seen[j]){ seen[j] = 1; q.push(j); }
+      }
+    }
+    pockets.push({ cells, sides });
+  }
+  if (!pockets.length) return true;
+  if (pockets.every(k => k.sides.size <= 1)){
+    const now = performance.now();
+    for (const k of pockets){
+      const o = [...k.sides][0]; if (o === undefined) continue;
+      k.cells.forEach((i, n) => { anim.set(i, { t0: now + (reduce ? 0 : 200 + n*14), from:G.color[i], well:G.kind[i] === 2 }); G.owner[i] = o; });
+    }
+    count(G);
+    return true;
+  }
+  return G.stall >= 3*G.players.length;
+}
+function endGame(){
+  G.over = true; locked = false;
+  const rank = G.players.map((p, i) => ({ ...p, i })).sort((a, b) => b.count - a.count);
+  const top = rank[0], tie = rank[1].count === top.count;
+  const solo = G.cfg.mode !== 'pass';
+  let title, sub;
+  if (tie){ title = 'Dead heat'; sub = `${top.name} and ${rank[1].name} finish level on ${top.count} tiles.`; }
+  else if (solo && top.i === 0){ title = 'The board is yours'; sub = `You win by ${top.count - rank[1].count} tiles.`; }
+  else if (solo){ title = `${top.name} takes it`; sub = `You finish ${top.count - G.players[0].count} tiles behind.`; }
+  else { title = `${top.name} wins`; sub = `${top.count} tiles to ${rank[1].count}.`; }
+  if (solo && !G.scored){
+    G.scored = true;
+    const won = !tie && top.i === 0;
+    stats.played++; if (won){ stats.won++; stats.streak++; stats.best = Math.max(stats.best, stats.streak); } else stats.streak = 0;
+    if (G.cfg.mode === 'daily'){
+      const margin = G.players[0].count - Math.max(...G.players.slice(1).map(p => p.count));
+      const prev = stats.daily[G.cfg.day];
+      stats.daily = { [G.cfg.day]: prev === undefined ? margin : Math.max(prev, margin) };
+      sub += ` Today's best margin: ${stats.daily[G.cfg.day] > 0 ? '+' : ''}${stats.daily[G.cfg.day]}.`;
+    }
+    store.set('stats', stats);
+    won ? sfx.win() : sfx.lose();
+  } else if (!solo) sfx.win();
+  $('over-title').textContent = title;
+  $('over-sub').textContent = sub;
+  $('over-rank').innerHTML = rank.map(p => `<li><span class="sw" style="background:var(--p${G.pcol[p.i]})"></span>${esc(p.name)}<span class="n">${p.count} · ${Math.round(100*p.count/G.playable)}%</span></li>`).join('');
+  save(); render(); kick();
+  const id = gameId;
+  setTimeout(() => { if (id === gameId) $('dlg-over').hidden = false; }, reduce ? 200 : 900);
+}
+const esc = s => String(s).replace(/[&<>"]/g, m => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[m]));
+
+function human(){ return G && !G.over && !locked && G.players[G.turn].human; }
+function pick(c){ if (human() && legal(G, c)) play({ c }); }
+function surge(){
+  const P = G.players[G.turn];
+  if (!human() || P.charges < 2 || G.extra > 0) return;
+  P.charges -= 2; G.extra = 1; sfx.power(); save(); render();
+}
+function burst(){
+  if (!human() || G.players[G.turn].charges < 3) return;
+  if (!reach(G, G.turn, G.pcol[G.turn], true).length) return;
+  play({ burst:true });
+}
+
+/* ---------- DOM ---------- */
+function buildTray(){
+  $('pigs').innerHTML = PIG.map((n, c) => `<button class="pig" id="pig-${c}" aria-label="${n}"><span class="blob" style="background:var(--p${c})">${c+1}</span><span class="g" id="gain-${c}"></span></button>`).join('');
+  PIG.forEach((_, c) => $('pig-'+c).addEventListener('click', () => pick(c)));
+}
+function render(){
+  if (!G) return;
+  const mine = human(), p = G.turn, P = G.players[p];
+  $('chips').innerHTML = G.players.map((q, i) => `<div class="chip${i === p && !G.over ? ' on' : ''}"><span class="sw" style="background:var(--p${G.pcol[i]})"></span><b>${esc(q.name)}</b><span class="pips" aria-label="${q.charges} charges">${'<span></span>'.repeat(q.charges)}</span><span class="n">${q.count}</span></div>`).join('');
+  $('bar').innerHTML = G.players.map((q, i) => `<span style="flex:${q.count} 0 0;background:var(--p${G.pcol[i]})"></span>`).join('') + `<span style="flex:${G.playable - G.players.reduce((s, q) => s + q.count, 0)} 0 0"></span>`;
+  let s;
+  if (G.over) s = 'Game over. <small>Start a new board when you are ready.</small>';
+  else if (!P.human) s = `${esc(P.name)} is choosing… <small>wearing ${PIG[G.pcol[p]]}</small>`;
+  else {
+    const who = G.cfg.mode === 'pass' ? `${esc(P.name)}, your move.` : 'Your move.';
+    s = `${who} <small>${G.extra ? 'Surge is live: you move twice.' : 'Pick a pigment nobody is wearing.'}</small>`;
+  }
+  $('status').innerHTML = s;
+  for (let c = 0; c < 6; c++){
+    const ok = mine && legal(G, c), b = $('pig-'+c);
+    b.disabled = !ok;
+    const worn = G.pcol.indexOf(c);
+    $('gain-'+c).textContent = worn >= 0 ? (G.over ? '' : 'worn') : mine ? '+' + reach(G, p, c, false).length : '';
+  }
+  const ch = mine ? P.charges : 0;
+  $('btn-surge').disabled = !mine || ch < 2 || G.extra > 0;
+  $('btn-surge').classList.toggle('armed', mine && G.extra > 0);
+  $('surge-sub').textContent = mine && G.extra > 0 ? 'Live: two moves this turn' : '2 charges · move twice';
+  const rim = mine && ch >= 3 ? reach(G, p, G.pcol[p], true).length : 0;
+  $('btn-burst').disabled = !mine || ch < 3 || !rim;
+  $('burst-sub').textContent = rim ? `3 charges · take the rim, +${rim}` : '3 charges · take the whole rim';
+}
+
+/* ---------- canvas ---------- */
+const cv = $('cv'), ctx = cv.getContext('2d');
+let geo = { size:10, ox:0, oy:0, w:0, h:0 }, raf = 0;
+function layout(){
+  const r = $('board').getBoundingClientRect(), dpr = Math.min(window.devicePixelRatio || 1, 3);
+  if (!G || r.width < 10 || r.height < 10) return;
+  cv.width = Math.round(r.width*dpr); cv.height = Math.round(r.height*dpr);
+  const size = Math.min(r.width/(SQ3*(G.cols + .5)), r.height/(1.5*G.rows + .5));
+  geo = { size, dpr, w:r.width, h:r.height, ox:(r.width - SQ3*size*(G.cols + .5))/2, oy:(r.height - size*(1.5*G.rows + .5))/2 };
+  kick();
+}
+const centre = i => { const c = i % G.cols, r = (i - c)/G.cols; return [geo.ox + SQ3*geo.size*(c + .5 + .5*(r & 1)), geo.oy + geo.size*(1 + 1.5*r)]; };
+const CORN = [...Array(7)].map((_, k) => { const a = (60*k - 30)*Math.PI/180; return [Math.cos(a), Math.sin(a)]; });
+function hex(x, y, s){ ctx.beginPath(); for (let k = 0; k < 6; k++) ctx.lineTo(x + CORN[k][0]*s, y + CORN[k][1]*s); ctx.closePath(); }
+const back = t => { const c = 1.9; return 1 + (c + 1)*Math.pow(t - 1, 3) + c*Math.pow(t - 1, 2); };
+function kick(){ if (!raf) raf = requestAnimationFrame(draw); }
+function draw(now){
+  raf = 0;
+  if (!G) return;
+  const st = getComputedStyle(document.documentElement), v = n => st.getPropertyValue(n).trim();
+  const pig = [0,1,2,3,4,5].map(c => v('--p'+c)), fg = v('--fg'), stone = v('--stone');
+  const { size:s, dpr } = geo, N = G.owner.length;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, geo.w, geo.h);
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const eff = new Int8Array(N);
+  for (let i = 0; i < N; i++){ const a = anim.get(i); eff[i] = a && now < a.t0 ? -1 : G.owner[i]; }
+  const free = (i, x, y, col, well) => {
+    hex(x, y, s*.88); ctx.fillStyle = pig[col]; ctx.fill();
+    if (well){
+      ctx.beginPath(); ctx.arc(x, y, s*.36, 0, 7); ctx.fillStyle = 'rgba(10,12,20,.82)'; ctx.fill();
+      ctx.beginPath(); ctx.arc(x, y, s*.15, 0, 7); ctx.fillStyle = '#fff'; ctx.fill();
+    } else if (prefs.marks && s > 9){
+      ctx.fillStyle = 'rgba(10,12,20,.5)'; ctx.font = `700 ${Math.round(s*.72)}px Figtree, system-ui, sans-serif`; ctx.fillText(col + 1, x, y + s*.04);
+    }
+  };
+  for (let i = 0; i < N; i++){
+    const [x, y] = centre(i), a = anim.get(i);
+    if (G.kind[i] === 1){ hex(x, y, s*.88); ctx.fillStyle = stone; ctx.fill(); continue; }
+    if (eff[i] < 0){ free(i, x, y, a ? a.from : G.color[i], a ? a.well : G.kind[i] === 2); continue; }
+    let k = 1.03;
+    if (a){
+      const t = Math.min(1, (now - a.t0)/DUR);
+      if (t >= 1) anim.delete(i); else { free(i, x, y, a.from, false); k = .4 + .63*back(t); }
+    }
+    hex(x, y, s*k); ctx.fillStyle = pig[G.pcol[G.owner[i]]]; ctx.fill();
+  }
+  // territory outlines
+  ctx.strokeStyle = fg; ctx.lineWidth = Math.max(1.6, s*.13); ctx.lineCap = 'round';
+  ctx.beginPath();
+  for (let i = 0; i < N; i++){
+    if (eff[i] < 0) continue;
+    const [x, y] = centre(i);
+    for (let k = 0; k < 6; k++){
+      const j = nb[i][k];
+      if (j >= 0 && eff[j] === eff[i]) continue;
+      ctx.moveTo(x + CORN[k][0]*s, y + CORN[k][1]*s); ctx.lineTo(x + CORN[k+1][0]*s, y + CORN[k+1][1]*s);
+    }
+  }
+  ctx.stroke();
+  // home badges
+  G.homes.forEach((h, p) => {
+    const [x, y] = centre(h);
+    ctx.beginPath(); ctx.arc(x, y, s*.5, 0, 7); ctx.fillStyle = 'rgba(10,12,20,.85)'; ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.font = `700 ${Math.round(s*.6)}px Figtree, system-ui, sans-serif`;
+    ctx.fillText(G.players[p].name[0] === 'P' && G.cfg.mode === 'pass' ? p + 1 : G.players[p].name[0], x, y + s*.04);
+  });
+  if (anim.size) kick();
+}
+cv.addEventListener('click', e => {
+  if (!human()) return;
+  const r = cv.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
+  let best = -1, bd = geo.size*geo.size;
+  for (let i = 0; i < G.owner.length; i++){ const [cx, cy] = centre(i), d = (cx-x)**2 + (cy-y)**2; if (d < bd){ bd = d; best = i; } }
+  if (best >= 0 && G.owner[best] < 0 && G.kind[best] !== 1) pick(G.color[best]);
+});
+new ResizeObserver(layout).observe($('board'));
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', kick);
+new MutationObserver(kick).observe(document.documentElement, { attributes:true, attributeFilter:['data-theme'] });
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(kick);
+
+/* ---------- setup, save, boot ---------- */
+const today = () => { const d = new Date(); return d.getFullYear()*10000 + (d.getMonth()+1)*100 + d.getDate(); };
+function configFromForm(){
+  const f = new FormData($('setup'));
+  prefs = { ...prefs, mode:f.get('mode'), size:f.get('size'), opp:+f.get('opp'), lvl:+f.get('lvl'), marks:$('opt-marks').checked };
+  store.set('prefs', prefs);
+  if (prefs.mode === 'daily') return { cfg:{ mode:'daily', day:today(), size:'m', players:[{ name:'You', human:true }, { name:'Rook', lvl:2 }, { name:'Wren', lvl:2 }] }, seed:today() };
+  if (prefs.mode === 'pass') return { cfg:{ mode:'pass', size:prefs.size, players:[{ name:'Player 1', human:true }, { name:'Player 2', human:true }] }, seed:(Math.random()*2**31) | 0 };
+  return { cfg:{ mode:'skirmish', size:prefs.size, players:[{ name:'You', human:true }, ...RIVALS.slice(0, prefs.opp).map(name => ({ name, lvl:prefs.lvl }))] }, seed:(Math.random()*2**31) | 0 };
+}
+function begin(cfg, seed){
+  gameId++; anim.clear(); locked = false;
+  G = makeGame(cfg, seed);
+  $('dlg-over').hidden = true; $('dlg-setup').hidden = true;
+  layout(); afterTurn();
+}
+const snapshot = () => G ? JSON.parse(JSON.stringify(G)) : null;
+function save(){ store.set('game', snapshot()); }
+function restore(g){
+  try {
+    if (!g || !g.owner || g.owner.length !== g.cols*g.rows || !SIZES[g.cfg.size]) return false;
+    gameId++; anim.clear(); G = g; nb = neighbours(G.cols, G.rows); locked = false;
+    layout();
+    if (G.over) render(); else afterTurn();
+    return true;
+  } catch { return false; }
+}
+function syncSetup(){
+  const mode = new FormData($('setup')).get('mode');
+  $('f-size').hidden = mode === 'daily';
+  $('f-opp').hidden = $('f-lvl').hidden = mode !== 'skirmish';
+  const d = stats.daily[today()];
+  $('mode-note').textContent = mode === 'daily' ? `One shared board a day against two sharp rivals. ${d === undefined ? 'Not played yet today.' : `Your best margin today: ${d > 0 ? '+' : ''}${d}.`}`
+    : mode === 'pass' ? 'Two players take turns on this device.' : 'You against one to three computer rivals.';
+  $('stats-line').textContent = stats.played ? `Record: ${stats.won} wins from ${stats.played} games · streak ${stats.streak} · best ${stats.best}` : 'No games on record yet.';
+}
+function openSetup(){
+  $('mode-'+prefs.mode).checked = true; $('size-'+prefs.size).checked = true;
+  $('opp-'+prefs.opp).checked = true; $('lvl-'+prefs.lvl).checked = true; $('opt-marks').checked = prefs.marks;
+  syncSetup(); $('dlg-over').hidden = true; $('dlg-setup').hidden = false;
+}
+function soundLabel(){ $('btn-sound').textContent = prefs.sound ? 'Sound on' : 'Sound off'; $('btn-sound').setAttribute('aria-pressed', prefs.sound); }
+
+$('setup').addEventListener('change', syncSetup);
+$('setup').addEventListener('submit', e => { e.preventDefault(); const { cfg, seed } = configFromForm(); begin(cfg, seed); });
+$('setup-cancel').addEventListener('click', () => { if (G) $('dlg-setup').hidden = true; });
+$('btn-new').addEventListener('click', openSetup);
+$('btn-help').addEventListener('click', () => $('dlg-help').hidden = false);
+$('help-close').addEventListener('click', () => $('dlg-help').hidden = true);
+$('btn-sound').addEventListener('click', () => { prefs.sound = !prefs.sound; store.set('prefs', prefs); soundLabel(); if (prefs.sound) tone(660, .1); });
+$('btn-surge').addEventListener('click', surge);
+$('btn-burst').addEventListener('click', burst);
+$('over-view').addEventListener('click', () => $('dlg-over').hidden = true);
+$('over-again').addEventListener('click', () => begin(G.cfg, G.seed));
+$('over-new').addEventListener('click', openSetup);
+document.querySelectorAll('.veil').forEach(v => v.addEventListener('click', e => { if (e.target === v && v.id !== 'dlg-setup') v.hidden = true; else if (e.target === v && G) v.hidden = true; }));
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape'){ $('dlg-help').hidden = true; if (G){ $('dlg-setup').hidden = true; } return; }
+  if (document.querySelector('.veil:not([hidden])') || e.metaKey || e.ctrlKey || e.altKey) return;
+  if (e.key >= '1' && e.key <= '6') pick(+e.key - 1);
+  else if (e.key === 's' || e.key === 'S') surge();
+  else if (e.key === 'b' || e.key === 'B') burst();
+});
+
+function start(data){
+  buildTray(); soundLabel();
+  if (restore(data && data.game) || restore(store.get('game', null))) return;
+  begin({ mode:'skirmish', size:prefs.size, players:[{ name:'You', human:true }, ...RIVALS.slice(0, prefs.opp).map(name => ({ name, lvl:prefs.lvl }))] }, (Math.random()*2**31) | 0);
+  if (!stats.played) $('dlg-help').hidden = false;
+}
+const hot = window.claude && window.claude.hot;
+if (hot && hot.snapshot) hot.snapshot(() => ({ game:snapshot() }));
+if (hot && hot.ready) hot.ready(start); else start((hot && hot.data) || {});
+})();
+</script>
