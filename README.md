@@ -13,8 +13,9 @@ Modes: Skirmish against 1–3 computer rivals (three skill levels, three board s
 
 An original real-time tile battle in `flipfire.html`; open it in a browser to play.
 
-- Slide to aim an auto-firing cannon. Shots flip the first rival tile they reach.
-- Five cannons unlock as you clear stages: Tapper, Fork, Lance, Mortar, Ricochet.
-- Build a 8-card deck from 24 cards (turrets, strikes, defences, tricks). Energy fills over time; you hold three cards at once.
-- Rivals gain plated tiles and their own cards on later stages, and some stages add walls that block shots.
-- Scrap earned each stage buys workshop upgrades. Hold more of the field after 60 seconds to win.
+- Pick a card from your hand, then tap a lane on the 11 by 18 board to play it there.
+- Turret cards set up a gun at your edge of the lane; strike cards land in the lane. Shots flip the first rival tile they reach.
+- Build an 8-card deck from 25 cards (turrets, strikes, defences, boosts, tricks). Energy fills over time; you hold four cards at once.
+- Scrap earned each stage buys workshop upgrades and raises individual cards up to rank 4.
+- Rivals build their own turrets, gain plated tiles, and some stages add walls. Every fifth stage is a boss stage.
+- Hold more of the field after 75 seconds to win.

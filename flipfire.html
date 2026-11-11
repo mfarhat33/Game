@@ -40,15 +40,20 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
 
 .tray{display:flex;flex-direction:column;gap:6px}
 .erow{display:flex;align-items:center;gap:8px;font-weight:800;font-size:13px}
-.energy{flex:1;height:8px;border-radius:4px;background:var(--line);overflow:hidden}
+.energy{position:relative;flex:1;height:10px;border-radius:4px;background:var(--line);overflow:hidden}
 .energy span{display:block;height:100%;width:0;background:var(--gold)}
-.powers{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
-.pow{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:7px 10px;text-align:left;display:flex;flex-direction:column;min-width:0}
-.pow b{font-weight:800;display:flex;justify-content:space-between;gap:6px}
+.powers{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
+.hint{margin:0;font-size:12.5px;font-weight:700;color:var(--muted);min-height:1.4em}
+.pow{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:7px 8px;min-height:86px;gap:1px;text-align:left;display:flex;flex-direction:column;min-width:0}
+.pow b{font-weight:800;font-size:13.5px;line-height:1.15;display:flex;justify-content:space-between;gap:6px}
 .pow b i{font-style:normal;color:var(--gold)}
-.pow span{font-size:12px;color:var(--muted);font-weight:700}
+.pow span{font-size:11.5px;line-height:1.25;color:var(--muted);font-weight:700}
 .pow:disabled{opacity:.42;cursor:default}
-.pow:not(:disabled){border-color:var(--gold)}
+.pow.ready{border-color:var(--gold)}
+.pow.sel{background:var(--fg);border-color:var(--fg);color:var(--bg)}
+.pow.sel span{color:var(--bg);opacity:.75}
+.pow u{text-decoration:none;font-size:10.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.pow.sel u{color:var(--bg);opacity:.75}
 
 .veil{position:fixed;inset:0;background:color-mix(in srgb,var(--bg) 80%,transparent);backdrop-filter:blur(3px);display:grid;place-items:center;z-index:20;
   padding:max(14px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(14px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
@@ -71,7 +76,18 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
 .btn.go{background:var(--a);border-color:var(--a);color:#06231A;font-family:var(--display);font-size:18px;font-weight:400}
 .btn:hover{border-color:var(--fg)}
 .btn:disabled{opacity:.5;cursor:default}
-.row.stick{position:sticky;bottom:-18px;background:var(--panel);padding-block:10px;margin-block:-4px -10px}
+.energy::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent 0 calc(10% - 2px),var(--bg) calc(10% - 2px) 10%)}
+.sheet.home{height:min(660px,100%);overflow:hidden}
+.tabs{display:flex;gap:4px;background:var(--bg);border-radius:12px;padding:3px}
+.tab{flex:1 1 0;min-width:0;border:0;background:none;border-radius:9px;padding:8px 2px;font-weight:800;font-size:13.5px;color:var(--muted)}
+.tab.on{background:var(--panel);color:var(--fg);box-shadow:0 0 0 1px var(--line)}
+.pane{flex:1 1 auto;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:8px;padding:2px}
+.cardrow{display:flex;gap:5px}
+.cardrow .opt{flex:1 1 auto}
+.rk{flex:none;width:74px;border:1px solid var(--line);border-radius:12px;background:none;padding:6px 4px;font-weight:800;font-size:12.5px;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.rk small{color:var(--gold);font-size:12px}
+.rk:disabled{opacity:.45;cursor:default}
+.rk:not(:disabled):hover{border-color:var(--gold)}
 </style>
 
 <div class="app">
@@ -89,28 +105,36 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
     <span class="num" id="pct-b">50%</span>
     <span class="clock num" id="clock">60</span>
   </div>
-  <div class="field" id="field"><canvas id="cv" aria-label="Tile field. Slide to aim your cannon."></canvas></div>
+  <div class="field" id="field"><canvas id="cv" aria-label="Tile field"></canvas></div>
   <section class="tray" aria-label="Your hand">
     <div class="erow"><div class="energy" aria-hidden="true"><span id="energy"></span></div><span class="num" id="energy-n">0/10</span></div>
     <div class="powers">
       <button class="pow" id="pow-0" disabled></button>
       <button class="pow" id="pow-1" disabled></button>
       <button class="pow" id="pow-2" disabled></button>
+      <button class="pow" id="pow-3" disabled></button>
     </div>
+    <p class="hint" id="hint"></p>
   </section>
 </div>
 
 <div class="veil" id="dlg-home">
-  <div class="sheet">
+  <div class="sheet home">
     <h2 id="home-title">Stage 1</h2>
-    <p id="home-sub">Slide to aim. Your cannon fires on its own and flips every rival tile it hits. Play cards from your hand as energy fills. Hold more of the field when the clock runs out.</p>
-    <h3>Cannon</h3>
-    <div class="list" id="cannons"></div>
-    <h3 id="deck-head">Deck</h3>
-    <div class="list" id="cards"></div>
-    <h3>Workshop</h3>
-    <div class="list" id="upgrades"></div>
-    <div class="row stick">
+    <div class="tabs" id="tabs">
+      <button class="tab" data-tab="battle">Battle</button>
+      <button class="tab" data-tab="deck">Deck</button>
+      <button class="tab" data-tab="workshop">Workshop</button>
+    </div>
+    <div class="pane" id="tab-battle">
+      <h3>How to play</h3>
+      <p id="home-how"></p>
+      <h3>This stage</h3>
+      <p id="home-sub"></p>
+    </div>
+    <div class="pane" id="tab-deck" hidden><h3 id="deck-head">Deck</h3><div class="list" id="cards"></div></div>
+    <div class="pane" id="tab-workshop" hidden><p>Scrap also raises card ranks in the Deck tab.</p><div class="list" id="upgrades"></div></div>
+    <div class="row">
       <button class="btn" id="btn-sound">Sound on</button>
       <button class="btn go" id="btn-play">Play</button>
     </div>
@@ -131,7 +155,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
 <div class="veil" id="dlg-pause" hidden>
   <div class="sheet">
     <h2>Paused</h2>
-    <p>Slide or use the arrow keys to aim. Keys 1, 2 and 3 play the cards in your hand.</p>
+    <p>Pick a card, then tap the lane you want it in. On a keyboard: 1 to 4 pick a card, the arrow keys move the lane, Enter plays it.</p>
     <div class="row">
       <button class="btn" id="pause-quit">Quit stage</button>
       <button class="btn go" id="pause-resume">Resume</button>
@@ -143,7 +167,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
 (() => {
 'use strict';
 const $ = id => document.getElementById(id);
-const COLS = 9, ROWS = 14, TIME = 60;
+const COLS = 11, ROWS = 18, TIME = 75;
 const CANNONS = {
   tapper:   { name:'Tapper',   unlock:1, gap:.15, speed:16, desc:'Quick single shots. Easy to steer.' },
   fork:     { name:'Fork',     unlock:2, gap:.42, speed:14, desc:'Three shots in a fan. Wide, loose.' },
@@ -158,31 +182,34 @@ const UPG = {
 };
 const CARDS = {
   overdrive:{ name:'Overdrive', cost:3, unlock:1, kind:'Boost',  desc:'Double fire rate for 5s' },
-  drill:    { name:'Drill',     cost:3, unlock:1, kind:'Strike', desc:'Flip 5 tiles deep in your lane' },
-  sentry:   { name:'Sentry',    cost:4, unlock:1, kind:'Build',  desc:'Drop an auto-turret here for 10s' },
+  drill:    { name:'Drill',     cost:3, unlock:1, kind:'Strike', desc:'Flip 5 tiles deep in the lane you tap' },
+  sentry:   { name:'Sentry',    cost:4, unlock:1, kind:'Build',  desc:'Quick-firing turret in the lane you tap' },
+  forkpost: { name:'Fork post', cost:4, unlock:2, kind:'Build',  desc:'Turret that fires a three-way fan' },
+  mortarpost:{ name:'Mortar post', cost:5, unlock:6, kind:'Build', desc:'Turret that shells 3 by 3 patches' },
   plating:  { name:'Plating',   cost:3, unlock:1, kind:'Guard',  desc:'Armour your front two rows' },
-  splash:   { name:'Splash',    cost:4, unlock:1, kind:'Strike', desc:'Flip a 5 by 3 patch at the front' },
-  jam:      { name:'Jam',       cost:4, unlock:1, kind:'Trick',  desc:'Stall the rival cannon for 4s' },
+  splash:   { name:'Splash',    cost:4, unlock:1, kind:'Strike', desc:'Flip a 5 by 3 patch at that lane\'s front' },
+  jam:      { name:'Jam',       cost:4, unlock:1, kind:'Trick',  desc:'Stall every rival gun for 4s' },
   barrage:  { name:'Barrage',   cost:3, unlock:1, kind:'Strike', desc:'One shot up every lane at once' },
   stasis:   { name:'Stasis',    cost:2, unlock:1, kind:'Guard',  desc:'Wipe out rival shots in the air' },
   tide:     { name:'Tide',      cost:6, unlock:2, kind:'Strike', desc:'Push every lane forward 2 tiles' },
   capacitor:{ name:'Capacitor', cost:1, unlock:2, kind:'Boost',  desc:'Double energy flow for 8s' },
   shield:   { name:'Shield',    cost:3, unlock:3, kind:'Guard',  desc:'Your tiles shrug off shots for 3s' },
-  crossfire:{ name:'Crossfire', cost:4, unlock:3, kind:'Strike', desc:'Hit the whole row at your front' },
-  split:    { name:'Split',     cost:4, unlock:4, kind:'Boost',  desc:'Fire from three lanes for 6s' },
+  crossfire:{ name:'Crossfire', cost:4, unlock:3, kind:'Strike', desc:'Hit the whole row at that lane\'s front' },
+  split:    { name:'Split',     cost:4, unlock:4, kind:'Boost',  desc:'Every turret fires three lanes for 6s' },
   minefield:{ name:'Minefield', cost:3, unlock:4, kind:'Guard',  desc:'Mine 5 front tiles; they blast back' },
-  decoy:    { name:'Decoy',     cost:2, unlock:5, kind:'Trick',  desc:'Rival aims at a far corner for 5s' },
   heavy:    { name:'Heavy rounds', cost:4, unlock:5, kind:'Boost', desc:'Shots go one tile deeper for 6s' },
-  sprinkler:{ name:'Sprinkler', cost:5, unlock:6, kind:'Build',  desc:'Bouncing auto-turret for 8s' },
+  sprinkler:{ name:'Sprinkler', cost:5, unlock:6, kind:'Build',  desc:'Turret whose shots bounce off walls' },
   broadhead:{ name:'Broadhead', cost:3, unlock:6, kind:'Boost',  desc:'Shots also hit both side tiles, 8s' },
   turncoat: { name:'Turncoat',  cost:5, unlock:7, kind:'Trick',  desc:'Every rival shot in the air turns' },
-  pikepost: { name:'Pike post', cost:5, unlock:7, kind:'Build',  desc:'Drilling auto-turret for 7s' },
+  pikepost: { name:'Pike post', cost:5, unlock:7, kind:'Build',  desc:'Turret whose bolts drill 4 deep' },
   wildfire: { name:'Wildfire',  cost:5, unlock:8, kind:'Strike', desc:'Flip 8 rival tiles along the front' },
   lockdown: { name:'Lockdown',  cost:4, unlock:8, kind:'Trick',  desc:'Rival cannot play cards for 6s' },
   meteor:   { name:'Meteor',    cost:7, unlock:9, kind:'Strike', desc:'Six blasts land on rival ground' },
   reclaim:  { name:'Reclaim',   cost:5, unlock:10, kind:'Guard', desc:'Take back the last 8 tiles you lost' }
 };
-const DECK = 8, MAXE = 10;
+const DECK = 8, HAND = 4, MAXE = 10, MAXRANK = 3;
+const POSTS = { sentry:['tapper', 10, .2], forkpost:['fork', 9, .5], pikepost:['lance', 7, .55], mortarpost:['mortar', 9, 1], sprinkler:['ricochet', 8, .17] };
+const rcost = r => 50*(r + 1)*(r + 1);
 const cost = (k, r) => Math.round(40*(r + 1)*Math.pow(1.45, r));
 
 const store = {
@@ -191,6 +218,8 @@ const store = {
 };
 const P = store.get({ level:1, coins:0, up:{ rapid:0, dynamo:0, van:0 }, cannon:'tapper', sound:true, deck:['overdrive','drill','sentry','plating','splash','jam','barrage','stasis'] });
 P.deck = (P.deck || []).filter(k => CARDS[k]).slice(0, DECK);
+P.rank = P.rank || {};
+let tab = 'battle';
 if (!CANNONS[P.cannon]) P.cannon = 'tapper';
 
 /* ---------- sound ---------- */
@@ -217,20 +246,28 @@ function newMatch(idle){
   // walls: fixed blocks that stop shots, mirrored so both sides face the same layout
   const W = (c, r) => { owner[r*COLS + c] = 2; owner[(ROWS - 1 - r)*COLS + (COLS - 1 - c)] = 2; };
   const pat = n < 4 ? 0 : n % 4;
-  if (pat === 1){ W(2, 5); W(6, 5); }
-  else if (pat === 2){ for (const c of [0, 1, 4, 7, 8]) W(c, 6); }
-  else if (pat === 3){ W(4, 4); W(3, 6); W(5, 6); }
+  if (pat === 1){ W(2, 7); W(8, 7); }
+  else if (pat === 2){ for (const c of [0, 1, 5, 9, 10]) W(c, 8); }
+  else if (pat === 3){ W(5, 6); W(4, 8); W(6, 8); }
   if (n >= 3){
-    let plates = Math.min(22, (n - 2)*3);
+    let plates = Math.min(32, (n - 2)*4);
     while (plates-- > 0){ const i = Math.floor(Math.random()*COLS*(ROWS - rowsMine)); if (owner[i] === 1) hp[i] = 1; }
   }
-  const queue = P.deck.slice().sort(() => Math.random() - .5);
-  const foe = ['overdrive','sentry'].concat(n >= 4 ? ['barrage'] : [], n >= 5 ? ['splash','plating'] : [], n >= 6 ? ['crossfire','minefield'] : [], n >= 7 ? ['tide','jam'] : [], n >= 8 ? ['wildfire','stasis'] : [], n >= 10 ? ['meteor','split','heavy'] : []);
-  M = { owner, hp, mine, flash, lost:[[], []], note:null, bullets:[], aux:[], t:TIME, idle:!!idle, over:false, aimT:0, target:COLS/2, queue, foe, foeNext:foe[0], handKey:'',
+  const g = true, boss = n % 5 === 0;
+  const posts = Object.keys(POSTS).filter(k => CARDS[k].unlock <= n);
+  let queue = P.deck.slice();
+  if (g) queue = queue.filter(k => k !== 'decoy').concat(posts.filter(k => !P.deck.includes(k)));
+  queue.sort(() => Math.random() - .5);
+  while (queue.filter(k => POSTS[k]).length < 4) queue.splice(Math.floor(Math.random()*(queue.length + 1)), 0, 'sentry');
+  { const at = queue.findIndex(k => POSTS[k]); if (at > 0) queue.unshift(queue.splice(at, 1)[0]); }
+  const foe = ['overdrive','sentry'].concat(n >= 4 ? ['barrage'] : [], n >= 5 ? ['splash','plating'] : [], n >= 6 ? ['crossfire','minefield'] : [], n >= 7 ? ['tide','jam'] : [], n >= 8 ? ['wildfire','stasis'] : [], n >= 10 ? ['meteor','split','heavy'] : [], g ? posts.concat(posts) : []);
+  M = { g, boss, sel:-1, lane:5, owner, hp, mine, flash, lost:[[], []], note:null, bullets:[], aux:[], t:TIME, idle:!!idle, over:false, aimT:0, target:COLS/2, queue, foe, foeNext:g ? 'sentry' : foe[0], handKey:'',
     sides:[
-      { x:COLS/2, cd:.4, type:P.cannon, rate:1 + .07*P.up.rapid, flow:.5*(1 + .1*P.up.dynamo), energy:2, over:0, frozen:0, split:0, shield:0, decoy:0, cap:0, heavy:0, wide:0, lock:0, alt:1 },
-      { x:COLS/2, cd:.6, type:rivalCannon(n), rate:Math.min(1.4, .7 + .05*n), flow:n >= 3 ? Math.min(.6, .22 + .03*n) : 0, energy:0, over:0, frozen:0, split:0, shield:0, decoy:0, cap:0, heavy:0, wide:0, lock:0, alt:1 }
+      { main:!g, x:COLS/2, cd:.4, type:P.cannon, rate:1 + .07*P.up.rapid, flow:(g ? .75 : .5)*(1 + .1*P.up.dynamo), energy:g ? 5 : 2, over:0, frozen:0, split:0, shield:0, decoy:0, cap:0, heavy:0, wide:0, lock:0, alt:1 },
+      { main:!g, x:COLS/2, cd:.6, type:rivalCannon(n), rate:Math.min(1.4, .7 + .05*n)*(boss ? 1.15 : 1), flow:Math.min(.9, .3 + .04*n), energy:2, over:0, frozen:0, split:0, shield:0, decoy:0, cap:0, heavy:0, wide:0, lock:0, alt:1 }
     ] };
+  for (const side of [0, 1]) for (const x of idle ? [2.5, 5.5, 8.5] : [5.5]) M.aux.push({ x, side, type:'tapper', cd:.3 + .2*side, life:idle ? 999 : 16, gap:.2, alt:1 });
+  if (boss && !idle) for (const x of [2.5, 8.5]) M.aux.push({ x, side:1, type:'tapper', cd:.3, life:999, gap:.3, alt:1 });
 }
 function shoot(side, x, type, T){
   if (x < 0 || x > COLS) return;
@@ -273,9 +310,9 @@ function hit(b, c, r){
   }
   return --b.pierce < 0;
 }
-function tide(side){
+function tide(side, depth = 2){
   for (let c = 0; c < COLS; c++){
-    let left = 2;
+    let left = depth;
     for (let k = 0; k < ROWS && left; k++){
       const r = side ? k : ROWS - 1 - k, i = r*COLS + c;
       if (M.owner[i] === 1 - side){ flip(i, side); left--; }
@@ -292,51 +329,55 @@ function blast(side, c, r){
     if (cc >= 0 && q >= 0 && cc < COLS && q < ROWS) strike(q*COLS + cc, side);
   }
 }
+function post(side, x, id, pw){
+  const [type, life, gap] = POSTS[id];
+  if (M.g){ x = Math.floor(x) + .5; M.aux = M.aux.filter(a => !(a.side === side && Math.floor(a.x) === Math.floor(x))); }
+  M.aux.push({ x, side, type, cd:.2, life:life*pw*(M.g ? 2.2 : 1), gap, alt:1 });
+}
 function cast(side, id){
   const S = M.sides[side], O = M.sides[1 - side], c = lane(S), f = fwd(side);
-  if (id === 'overdrive') S.over = 5;
-  else if (id === 'jam') O.frozen = 4;
-  else if (id === 'tide') tide(side);
-  else if (id === 'shield') S.shield = 3;
-  else if (id === 'split') S.split = 6;
-  else if (id === 'decoy'){ O.decoy = 5; M.target = Math.random() < .5 ? .5 : COLS - .5; }
-  else if (id === 'sentry') M.aux.push({ x:S.x, side, type:'tapper', cd:.2, life:10, gap:.2, alt:1 });
-  else if (id === 'sprinkler') M.aux.push({ x:S.x, side, type:'ricochet', cd:.2, life:8, gap:.17, alt:1 });
+  const pw = side === 0 ? 1 + .25*(P.rank[id] || 0) : 1, rk = Math.round((pw - 1)*4);
+  if (id === 'overdrive') S.over = 5*pw;
+  else if (id === 'jam') O.frozen = 4*pw;
+  else if (id === 'tide') tide(side, rk >= 2 ? 3 : 2);
+  else if (id === 'shield') S.shield = 3*pw;
+  else if (id === 'split') S.split = 6*pw;
+  else if (id === 'decoy'){ O.decoy = 5*pw; M.target = Math.random() < .5 ? .5 : COLS - .5; }
+  else if (POSTS[id]) post(side, S.x, id, pw);
   else if (id === 'drill'){
-    let left = 5;
+    let left = Math.round(5*pw);
     for (let k = 0; k < ROWS && left; k++){ const i = (base(side) + f*k)*COLS + c; if (M.owner[i] === 1 - side){ flip(i, side); left--; } }
   }
   else if (id === 'splash'){
     const r0 = frontRow(side, c);
-    if (r0 >= 0) for (let k = 0; k < 3; k++) for (let dc = -2; dc <= 2; dc++){
+    if (r0 >= 0) for (let k = 0; k < Math.round(3*pw); k++) for (let dc = -2; dc <= 2; dc++){
       const cc = c + dc, r = r0 + f*k;
       if (cc >= 0 && cc < COLS && r >= 0 && r < ROWS) strike(r*COLS + cc, side);
     }
   }
   else if (id === 'plating'){
     for (let cc = 0; cc < COLS; cc++){
-      let left = 2;
+      let left = Math.round(2*pw);
       for (let k = 0; k < ROWS && left; k++){ const i = (base(1 - side) + fwd(1 - side)*k)*COLS + cc; if (M.owner[i] === side){ M.hp[i] = 1; M.flash[i] = .5; left--; } }
     }
   }
-  else if (id === 'turncoat'){ for (const b of M.bullets) if (b.side !== side){ b.side = side; b.vy = -b.vy; } }
+  else if (id === 'turncoat'){ for (const b of M.bullets) if (b.side !== side){ b.side = side; b.vy = -b.vy; b.pierce += rk; } }
   else if (id === 'meteor'){
     const foes = []; M.owner.forEach((o, i) => { if (o === 1 - side) foes.push(i); });
-    for (let k = 0; k < 6 && foes.length; k++){ const i = foes[Math.floor(Math.random()*foes.length)]; blast(side, i % COLS, Math.floor(i/COLS)); }
+    for (let k = 0; k < Math.round(6*pw) && foes.length; k++){ const i = foes[Math.floor(Math.random()*foes.length)]; blast(side, i % COLS, Math.floor(i/COLS)); }
     tone(90, .3, 'sine', .07);
   }
-  if (id === 'barrage'){ for (let cc = 0; cc < COLS; cc++) shoot(side, cc + .5, 'tapper', S); }
-  else if (id === 'crossfire'){ const r0 = frontRow(side, c); if (r0 >= 0) for (let cc = 0; cc < COLS; cc++) strike(r0*COLS + cc, side); }
+  if (id === 'barrage'){ const n0 = M.bullets.length; for (let cc = 0; cc < COLS; cc++) shoot(side, cc + .5, 'tapper', S); for (let q = n0; q < M.bullets.length; q++) M.bullets[q].pierce += rk; }
+  else if (id === 'crossfire'){ const r0 = frontRow(side, c); if (r0 >= 0) for (let k = 0; k < (rk >= 2 ? 2 : 1); k++){ const r = r0 + f*k; if (r >= 0 && r < ROWS) for (let cc = 0; cc < COLS; cc++) strike(r*COLS + cc, side); } }
   else if (id === 'minefield'){
-    const cols = [...Array(COLS).keys()].sort(() => Math.random() - .5).slice(0, 5);
+    const cols = [...Array(COLS).keys()].sort(() => Math.random() - .5).slice(0, Math.round(5*pw));
     for (const cc of cols) for (let k = 0; k < ROWS; k++){ const i = (base(1 - side) + fwd(1 - side)*k)*COLS + cc; if (M.owner[i] === side){ M.mine[i] = 1; M.flash[i] = .5; break; } }
   }
-  else if (id === 'stasis') M.bullets = M.bullets.filter(b => b.side === side);
-  else if (id === 'capacitor') S.cap = 8;
-  else if (id === 'heavy') S.heavy = 6;
-  else if (id === 'broadhead') S.wide = 8;
-  else if (id === 'lockdown') O.lock = 6;
-  else if (id === 'pikepost') M.aux.push({ x:S.x, side, type:'lance', cd:.2, life:7, gap:.55, alt:1 });
+  else if (id === 'stasis'){ M.bullets = M.bullets.filter(b => b.side === side); if (rk) S.shield = Math.max(S.shield, rk*.5); }
+  else if (id === 'capacitor') S.cap = 8*pw;
+  else if (id === 'heavy') S.heavy = 6*pw;
+  else if (id === 'broadhead') S.wide = 8*pw;
+  else if (id === 'lockdown') O.lock = 6*pw;
   else if (id === 'wildfire'){
     const edge = [];
     for (let i = 0; i < M.owner.length; i++){
@@ -344,29 +385,54 @@ function cast(side, id){
       const cc = i % COLS;
       if (M.owner[i - COLS] === side || M.owner[i + COLS] === side || (cc > 0 && M.owner[i - 1] === side) || (cc < COLS - 1 && M.owner[i + 1] === side)) edge.push(i);
     }
-    edge.sort(() => Math.random() - .5).slice(0, 8).forEach(i => flip(i, side));
+    edge.sort(() => Math.random() - .5).slice(0, Math.round(8*pw)).forEach(i => flip(i, side));
   }
   else if (id === 'reclaim'){
-    const L = M.lost[side]; let left = 8;
+    const L = M.lost[side]; let left = Math.round(8*pw);
     while (L.length && left){ const i = L.pop(); if (M.owner[i] === 1 - side){ flip(i, side); left--; } }
   }
   M.note = { text:CARDS[id].name, side, t:1.5 };
   tone(side ? 240 : 660, .18, 'triangle', .05); tone(side ? 180 : 990, .2, 'sine', .04, .07);
 }
-function power(k){
-  const S = M && M.sides[0];
-  if (!M || M.idle || M.over || paused || S.lock > 0) return;
-  const id = M.queue[k], card = CARDS[id];
-  if (!card || S.energy < card.cost) return;
+const live = () => M && !M.idle && !M.over && !paused;
+function spend(k){
+  const S = M.sides[0], id = M.queue[k], card = CARDS[id];
+  if (!card) return;
+  if (S.lock > 0){ M.note = { text:'Locked down', side:0, t:1 }; return; }
+  if (S.energy < card.cost){ M.note = { text:`Need ${card.cost} energy`, side:0, t:1 }; tone(150, .1, 'sine', .04); return; }
   S.energy -= card.cost;
   M.queue.splice(k, 1); M.queue.push(id);
   cast(0, id);
+}
+function power(k){
+  if (!live() || !M.queue[k]) return;
+  if (M.g){ M.sel = M.sel === k ? -1 : k; tone(520, .05); return; }
+  spend(k);
+}
+function playAt(k, laneIdx){
+  if (!live() || !M.g || k < 0) return;
+  M.sides[0].x = laneIdx + .5;
+  const before = M.queue[k]; spend(k);
+  if (M.queue[k] !== before) M.sel = -1;
 }
 function share(){ let a = 0, b = 0; for (const o of M.owner){ if (o === 0) a++; else if (o === 1) b++; } return a/(a + b); }
 
 function rival(dt){
   const R = M.sides[1], n = P.level;
   if (R.frozen > 0) return;
+  if (M.g){
+    if (R.lock <= 0 && R.energy >= CARDS[M.foeNext].cost){
+      const isPost = !!POSTS[M.foeNext]; let best = 0, bv = -1e9;
+      for (let c = 0; c < COLS; c++){
+        let k = 0; for (let r = 0; r < ROWS; r++) if (!M.owner[r*COLS + c]) k++;
+        const v = k + Math.random()*3 - (isPost && M.aux.some(a => a.side === 1 && Math.floor(a.x) === c) ? 100 : 0);
+        if (v > bv){ bv = v; best = c; }
+      }
+      R.x = best + .5; R.energy -= CARDS[M.foeNext].cost; cast(1, M.foeNext);
+      M.foeNext = M.foe[Math.floor(Math.random()*M.foe.length)];
+    }
+    return;
+  }
   if (R.lock <= 0 && R.energy >= CARDS[M.foeNext].cost){
     R.energy -= CARDS[M.foeNext].cost; cast(1, M.foeNext);
     M.foeNext = M.foe[Math.floor(Math.random()*M.foe.length)];
@@ -388,18 +454,22 @@ let keyDir = 0;
 function step(dt){
   if (!M.idle){ M.t -= dt; }
   const A = M.sides[0];
-  if (keyDir) A.x = Math.min(COLS - .5, Math.max(.5, A.x + keyDir*9*dt));
+  if (keyDir && A.main) A.x = Math.min(COLS - .5, Math.max(.5, A.x + keyDir*9*dt));
   if (M.idle){ A.x = COLS/2 + Math.sin(performance.now()/900)*3; }
   rival(dt);
   M.sides.forEach((S, side) => {
     for (const k of ['over','split','shield','decoy','cap','heavy','wide','lock']) if (S[k] > 0) S[k] -= dt;
     if (!M.idle) S.energy = Math.min(MAXE, S.energy + S.flow*dt*(S.cap > 0 ? 2 : 1));
     if (S.frozen > 0){ S.frozen -= dt; return; }
-    S.cd -= dt; if (S.cd <= 0) fire(side);
+    if (S.main){ S.cd -= dt; if (S.cd <= 0) fire(side); }
   });
   for (let k = M.aux.length - 1; k >= 0; k--){
-    const a = M.aux[k]; a.life -= dt; a.cd -= dt;
-    if (a.cd <= 0){ shoot(a.side, a.x, a.type, a); a.cd = a.gap; }
+    const a = M.aux[k], S = M.sides[a.side]; a.life -= dt; if (S.frozen <= 0) a.cd -= dt;
+    if (a.cd <= 0){
+      shoot(a.side, a.x, a.type, a);
+      if (M.g && S.split > 0){ shoot(a.side, a.x - 1.5, a.type, a); shoot(a.side, a.x + 1.5, a.type, a); }
+      a.cd = a.gap/(S.rate*(S.over > 0 ? 2 : 1));
+    }
     if (a.life <= 0) M.aux.splice(k, 1);
   }
   for (let k = M.bullets.length - 1; k >= 0; k--){
@@ -420,15 +490,13 @@ function finish(s){
   M.over = true;
   const won = s > .5, pct = Math.round(s*100);
   const stars = !won ? 0 : s >= .8 ? 3 : s >= .65 ? 2 : 1;
-  const earned = won ? 30 + 6*P.level + Math.round((s - .5)*80) + 10*(stars - 1) : 8 + Math.round(s*20);
+  const earned = won ? (30 + 6*P.level + Math.round((s - .5)*80) + 10*(stars - 1))*(M.boss ? 2 : 1) : 8 + Math.round(s*20);
   P.coins += earned;
   $('over-title').textContent = won ? (s >= .88 ? 'Clean sweep' : 'Stage cleared') + ' ' + '★'.repeat(stars) + '☆'.repeat(3 - stars) : s === .5 ? 'Dead heat' : 'Line lost';
   $('over-sub').textContent = `You held ${pct}% of the field and salvaged ${earned} scrap.` + (won ? '' : ' Spend it in the workshop and try again.');
   $('over-next').textContent = won ? 'Next stage' : 'Retry';
   if (won){ P.level++; [523,659,784,1047].forEach((f, i) => tone(f, .2, 'triangle', .06, i*.1)); }
   else [392,330,262].forEach((f, i) => tone(f, .24, 'sine', .06, i*.13));
-  const fresh = Object.keys(CANNONS).find(k => CANNONS[k].unlock === P.level && won);
-  if (fresh) $('over-sub').textContent += ` New cannon unlocked: ${CANNONS[fresh].name}.`;
   const card = Object.keys(CARDS).filter(k => CARDS[k].unlock === P.level && won).map(k => CARDS[k].name);
   if (card.length) $('over-sub').textContent += ` New card: ${card.join(', ')}.`;
   store.set(P); chrome();
@@ -446,17 +514,17 @@ function layout(){
   geo = { t, dpr, w:r.width, h:r.height, gx:(r.width - COLS*t)/2, gy:(r.height - (ROWS + 2.6)*t)/2 + 1.3*t };
 }
 function rr(x, y, w, h, q){ ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x, y, w, h, q) : ctx.rect(x, y, w, h); }
-function cannon(side, col, fg, ice){
-  const S = M.sides[side], { t, gx, gy } = geo, dir = side ? 1 : -1;
-  const x = gx + S.x*t, y = side ? gy - .62*t : gy + ROWS*t + .62*t;
-  ctx.save(); ctx.translate(x, y); ctx.scale(1, -dir);
+function cannon(side, col, fg, ice, G){
+  const S = M.sides[side], T = G || S, { t, gx, gy } = geo, dir = side ? 1 : -1;
+  const x = gx + T.x*t, y = side ? gy - .62*t : gy + ROWS*t + .62*t;
+  ctx.save(); ctx.translate(x, y); ctx.scale(G ? .84 : 1, G ? -dir*.84 : -dir);
   const c = S.frozen > 0 ? ice : col;
   ctx.fillStyle = c;
   const barrel = (ang, w, len) => { ctx.save(); ctx.rotate(ang); rr(-w/2, 0, w, len, w*.3); ctx.fill(); ctx.restore(); };
-  if (S.type === 'fork'){ barrel(-.45, .2*t, .62*t); barrel(0, .2*t, .68*t); barrel(.45, .2*t, .62*t); }
-  else if (S.type === 'lance') barrel(0, .16*t, .86*t);
-  else if (S.type === 'mortar') barrel(0, .5*t, .52*t);
-  else if (S.type === 'ricochet'){ barrel(-.5, .2*t, .66*t); barrel(.5, .2*t, .66*t); }
+  if (T.type === 'fork'){ barrel(-.45, .2*t, .62*t); barrel(0, .2*t, .68*t); barrel(.45, .2*t, .62*t); }
+  else if (T.type === 'lance') barrel(0, .16*t, .86*t);
+  else if (T.type === 'mortar') barrel(0, .5*t, .52*t);
+  else if (T.type === 'ricochet'){ barrel(-.5, .2*t, .66*t); barrel(.5, .2*t, .66*t); }
   else barrel(0, .26*t, .64*t);
   ctx.fillStyle = fg; rr(-.48*t, -.34*t, .96*t, .5*t, .2*t); ctx.fill();
   ctx.fillStyle = c; ctx.beginPath(); ctx.arc(0, -.09*t, .13*t, 0, 7); ctx.fill();
@@ -486,6 +554,7 @@ function draw(){
   for (const a of M.aux){
     const x = gx + a.x*t, y = a.side ? gy - .3*t : gy + ROWS*t + .3*t;
     ctx.globalAlpha = Math.min(1, a.life/1.5);
+    if (M.g){ cannon(a.side, col[a.side], fg, ice, a); ctx.globalAlpha = 1; continue; }
     ctx.fillStyle = fg; rr(x - .24*t, y - .2*t, .48*t, .4*t, .12*t); ctx.fill();
     ctx.fillStyle = col[a.side]; ctx.beginPath(); ctx.arc(x, y, .1*t, 0, 7); ctx.fill();
     ctx.globalAlpha = 1;
@@ -495,7 +564,11 @@ function draw(){
     for (let c = 0; c < COLS; c++){ const r = frontRow(1 - side, c); if (r < 0) continue; const y = gy + (side ? r : r + 1)*t; ctx.moveTo(gx + c*t + 2, y); ctx.lineTo(gx + (c + 1)*t - 2, y); }
     ctx.stroke(); ctx.globalAlpha = 1;
   }
-  cannon(0, col[0], fg, ice); cannon(1, col[1], fg, ice);
+  for (const side of [0, 1]) if (M.sides[side].main) cannon(side, col[side], fg, ice);
+  if (M.g && M.sel >= 0 && !M.over){
+    ctx.fillStyle = fg; ctx.globalAlpha = .16; ctx.fillRect(gx + M.lane*t, gy, t, ROWS*t);
+    ctx.globalAlpha = 1; ctx.strokeStyle = fg; ctx.lineWidth = 2; ctx.strokeRect(gx + M.lane*t + 1, gy + 1, t - 2, ROWS*t - 2);
+  }
   if (M.note && M.note.t > 0){
     const y = gy + (M.note.side ? 2.5 : ROWS - 2.5)*t;
     ctx.globalAlpha = Math.min(1, M.note.t*2); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
@@ -512,12 +585,17 @@ function hud(){
   $('clock').textContent = Math.max(0, Math.ceil(M.t));
   $('energy').style.width = (A.energy*10) + '%';
   $('energy-n').textContent = Math.floor(A.energy) + '/' + MAXE;
-  const key = M.queue.slice(0, 3).join();
+  const next = CARDS[M.queue[HAND]], key = M.queue.slice(0, HAND + 1).join() + M.sel;
   if (key !== M.handKey){
     M.handKey = key;
-    for (let k = 0; k < 3; k++){ const c = CARDS[M.queue[k]]; $('pow-' + k).innerHTML = c ? `<b>${c.name}<i>${c.cost}</i></b><span>${c.desc}</span>` : ''; }
+    for (let k = 0; k < HAND; k++){ const c = CARDS[M.queue[k]]; $('pow-' + k).innerHTML = c ? `<b>${c.name}<i>${c.cost}</i></b><u>${c.kind}</u><span>${c.desc}</span>` : ''; }
+    $('hint').textContent = M.idle ? '' : (M.sel >= 0 ? 'Now tap a lane. ' : 'Pick a card, then tap a lane. ') + (next ? 'Next up: ' + next.name : '');
   }
-  for (let k = 0; k < 3; k++){ const c = CARDS[M.queue[k]]; $('pow-' + k).disabled = !c || M.idle || M.over || A.lock > 0 || A.energy < c.cost; }
+  for (let k = 0; k < HAND; k++){
+    const c = CARDS[M.queue[k]], b = $('pow-' + k), can = c && !M.idle && !M.over && A.lock <= 0 && A.energy >= c.cost;
+    b.disabled = !c || M.idle || M.over || (!M.g && !can);
+    b.classList.toggle('ready', !!can); b.classList.toggle('sel', M.g && M.sel === k);
+  }
 }
 let last = 0;
 function frame(now){
@@ -528,21 +606,28 @@ function frame(now){
 }
 
 /* ---------- input ---------- */
-function aim(e){
-  if (!M || M.idle || M.over || paused) return;
-  const r = cv.getBoundingClientRect();
-  M.sides[0].x = Math.min(COLS - .5, Math.max(.5, (e.clientX - r.left - geo.gx)/geo.t));
+function aim(e, tap){
+  if (!live()) return;
+  const r = cv.getBoundingClientRect(), x = (e.clientX - r.left - geo.gx)/geo.t;
+  if (!M.g){ M.sides[0].x = Math.min(COLS - .5, Math.max(.5, x)); return; }
+  if (x < 0 || x >= COLS) return;
+  M.lane = Math.floor(x);
+  if (tap){ if (M.sel >= 0) playAt(M.sel, M.lane); else M.note = { text:'Pick a card first', side:0, t:1 }; }
 }
-cv.addEventListener('pointerdown', e => { try { cv.setPointerCapture(e.pointerId); } catch {} aim(e); });
-cv.addEventListener('pointermove', aim);
+cv.addEventListener('pointerdown', e => { try { if (M && !M.g) cv.setPointerCapture(e.pointerId); } catch {} aim(e, true); });
+cv.addEventListener('pointermove', e => aim(e, false));
 document.addEventListener('keydown', e => {
-  if (e.key === 'ArrowLeft' || e.key === 'a') keyDir = -1;
-  else if (e.key === 'ArrowRight' || e.key === 'd') keyDir = 1;
-  else if (e.key >= '1' && e.key <= '3') power(+e.key - 1);
+  const left = e.key === 'ArrowLeft' || e.key === 'a', right = e.key === 'ArrowRight' || e.key === 'd';
+  if (M && M.g && live()){
+    if (left) M.lane = Math.max(0, M.lane - 1);
+    else if (right) M.lane = Math.min(COLS - 1, M.lane + 1);
+    else if ((e.key === 'Enter' || e.key === ' ') && M.sel >= 0){ e.preventDefault(); playAt(M.sel, M.lane); }
+  } else if (left) keyDir = -1; else if (right) keyDir = 1;
+  if (e.key >= '1' && e.key <= String(HAND)) power(+e.key - 1);
   else if (e.key === 'Escape' || e.key === 'p') pause(!paused);
 });
 document.addEventListener('keyup', e => { if (['ArrowLeft','ArrowRight','a','d'].includes(e.key)) keyDir = 0; });
-[0, 1, 2].forEach(k => $('pow-' + k).addEventListener('click', () => power(k)));
+for (let k = 0; k < HAND; k++) $('pow-' + k).addEventListener('click', () => power(k));
 function pause(on){
   if (!M || M.idle || M.over) return;
   paused = on; $('dlg-pause').hidden = !on;
@@ -557,22 +642,22 @@ function chrome(){
 }
 function home(){
   chrome();
-  $('home-title').textContent = 'Stage ' + P.level;
-  const foe = CANNONS[rivalCannon(P.level)].name;
-  $('home-sub').textContent = P.level === 1
-    ? 'Slide to aim. Your cannon fires on its own and flips every rival tile it hits. Play cards from your hand as energy fills. Hold more of the field when the clock runs out.'
-    : `The rival brings a ${foe}` + (P.level >= 3 ? ', plated tiles that take two hits, and cards of its own.' : '.');
+  const boss = P.level % 5 === 0;
+  $('home-title').textContent = 'Stage ' + P.level + (boss ? ' · Boss' : '');
+  document.querySelectorAll('#tabs .tab').forEach(b => { b.classList.toggle('on', b.dataset.tab === tab); $('tab-' + b.dataset.tab).hidden = b.dataset.tab !== tab; });
+  $('home-how').textContent = `Pick a card from your hand, then tap a lane on the board. Turrets set up at your edge of that lane and fire until they wear out; strikes land in that lane. Shots flip the first rival tile they reach. Hold more of the field after ${TIME} seconds.`;
+  $('home-sub').textContent = 'The rival builds turrets of its own'
+    + (P.level >= 3 ? ' and has plated tiles that take two hits.' : '.')
+    + (P.level >= 4 && P.level % 4 ? ' Walls on the field stop shots.' : '')
+    + (boss ? ' Boss stage: two fixed rival turrets and a faster rival, for double scrap.' : '');
   $('deck-head').textContent = `Deck · ${P.deck.length} of ${DECK} chosen`;
   $('cards').innerHTML = Object.entries(CARDS).map(([k, c]) => {
-    const open = P.level >= c.unlock, on = P.deck.includes(k);
-    return `<button class="opt${on ? ' sel' : ''}" data-card="${k}" ${open && (on || P.deck.length < DECK) ? '' : 'disabled'}><div><b>${c.name} · ${c.cost}</b><small>${c.kind} · ${c.desc}</small></div><em>${!open ? 'Stage ' + c.unlock : on ? 'In deck' : 'Add'}</em></button>`;
+    const open = P.level >= c.unlock, on = P.deck.includes(k), r = P.rank[k] || 0, full = r >= MAXRANK;
+    return `<div class="cardrow"><button class="opt${on ? ' sel' : ''}" data-card="${k}" ${open && (on || P.deck.length < DECK) ? '' : 'disabled'}><div><b>${c.name} · ${c.cost}</b><small>${c.kind} · ${c.desc}</small></div><em>${!open ? 'Stage ' + c.unlock : on ? 'In deck' : 'Add'}</em></button>`
+      + `<button class="rk" data-rank="${k}" aria-label="Raise ${c.name} rank" ${open && !full && P.coins >= rcost(r) ? '' : 'disabled'}>Rank ${r + 1}<small class="num">${full ? 'max' : rcost(r)}</small></button></div>`;
   }).join('');
   $('btn-play').disabled = P.deck.length !== DECK;
   $('btn-play').textContent = P.deck.length === DECK ? 'Play' : `Pick ${DECK - P.deck.length} more`;
-  $('cannons').innerHTML = Object.entries(CANNONS).map(([k, c]) => {
-    const open = P.level >= c.unlock;
-    return `<button class="opt${P.cannon === k ? ' sel' : ''}" data-cannon="${k}" ${open ? '' : 'disabled'}><div><b>${c.name}</b><small>${c.desc}</small></div><em>${open ? (P.cannon === k ? 'Fitted' : 'Fit') : 'Stage ' + c.unlock}</em></button>`;
-  }).join('');
   $('upgrades').innerHTML = Object.entries(UPG).map(([k, u]) => {
     const r = P.up[k], full = r >= u.max, c = cost(k, r);
     return `<button class="opt" data-up="${k}" ${full || P.coins < c ? 'disabled' : ''}><div><b>${u.name} · rank ${r}/${u.max}</b><small>${u.desc}</small></div><em class="num">${full ? 'Maxed' : c + ' scrap'}</em></button>`;
@@ -580,13 +665,19 @@ function home(){
   $('dlg-over').hidden = true; $('dlg-pause').hidden = true; $('dlg-home').hidden = false;
   paused = false; newMatch(true);
 }
-$('cannons').addEventListener('click', e => { const b = e.target.closest('[data-cannon]'); if (!b || b.disabled) return; P.cannon = b.dataset.cannon; store.set(P); tone(520, .06); home(); });
+$('tabs').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (!b) return; tab = b.dataset.tab; home(); });
 $('cards').addEventListener('click', e => {
+  const u = e.target.closest('[data-rank]');
+  if (u && !u.disabled){
+    const k = u.dataset.rank, r = P.rank[k] || 0; if (r >= MAXRANK || P.coins < rcost(r)) return;
+    P.coins -= rcost(r); P.rank[k] = r + 1; store.set(P); tone(700, .1); tone(1050, .12, 'triangle', .05, .07);
+    const top = $('tab-deck').scrollTop; home(); $('tab-deck').scrollTop = top; return;
+  }
   const b = e.target.closest('[data-card]'); if (!b || b.disabled) return;
   const k = b.dataset.card, at = P.deck.indexOf(k);
   if (at >= 0) P.deck.splice(at, 1); else if (P.deck.length < DECK) P.deck.push(k);
   store.set(P); tone(520, .06);
-  const top = document.querySelector('#dlg-home .sheet').scrollTop; home(); document.querySelector('#dlg-home .sheet').scrollTop = top;
+  const top = $('tab-deck').scrollTop; home(); $('tab-deck').scrollTop = top;
 });
 $('upgrades').addEventListener('click', e => {
   const b = e.target.closest('[data-up]'); if (!b || b.disabled) return;
@@ -602,7 +693,7 @@ $('btn-pause').addEventListener('click', () => pause(true));
 $('pause-resume').addEventListener('click', () => pause(false));
 $('pause-quit').addEventListener('click', home);
 
-window.__flipfire = { P, play:() => play(), state:() => M, run(bot){ while (!M.over){ bot(M, power); step(1/30); } return share(); } };
+window.__flipfire = { P, play:() => play(), state:() => M, run(bot){ while (!M.over){ bot(M, power, playAt); step(1/30); } return share(); } };
 new ResizeObserver(layout).observe($('field'));
 layout(); home(); requestAnimationFrame(frame);
 })();
