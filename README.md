@@ -15,6 +15,6 @@ An original real-time tile battle in `flipfire.html`; open it in a browser to pl
 
 - Slide to aim an auto-firing cannon. Shots flip the first rival tile they reach.
 - Five cannons unlock as you clear stages: Tapper, Fork, Lance, Mortar, Ricochet.
-- Build a 6-card deck from 13 cards (turrets, strikes, defences, tricks). Energy fills over time; you hold three cards at once.
-- Rivals gain plated tiles and their own cards on later stages.
+- Build a 8-card deck from 24 cards (turrets, strikes, defences, tricks). Energy fills over time; you hold three cards at once.
+- Rivals gain plated tiles and their own cards on later stages, and some stages add walls that block shots.
 - Scrap earned each stage buys workshop upgrades. Hold more of the field after 60 seconds to win.
