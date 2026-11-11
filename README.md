@@ -21,4 +21,5 @@ An original real-time tile battle in `flipfire.html`; open it in a browser to pl
 - Coins come from wins, stars, first clears, win streaks, a goal on every stage and a daily reward. They buy workshop upgrades and raise each card up to level 10.
 - Five named rivals rotate by stage. Later stages add plated tiles and walls; every fifth stage is a boss stage.
 - Cleared stages can be replayed, an unfinished match resumes after a reload, and there is an option to stripe the rival's tiles.
-- Hold more of the field after 75 seconds to win.
+- Every force has a role (Anchor, Pusher, Siege, Killer, Support) and the Forces tab tells you what your deck is missing.
+- A match lasts 2:30. Energy doubles for the last 45 seconds. Hold more of the field when the clock runs out to win.

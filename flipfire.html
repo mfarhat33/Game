@@ -42,6 +42,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
 .who.foe{justify-content:flex-end}
 .clock{font-family:var(--display);font-size:22px;line-height:1;min-width:2.6em;text-align:center;padding:5px 10px;border-radius:999px;background:var(--bg2)}
 .clock.low{background:var(--b);color:#fff}
+.clock.surge{background:var(--gold);color:#1B1300}
 .share{grid-column:1/-1;position:relative;height:10px;border-radius:5px;background:var(--b);overflow:hidden}
 .share span{display:block;height:100%;background:var(--a);width:50%}
 .share i{position:absolute;left:50%;top:0;bottom:0;width:2px;margin-left:-1px;background:var(--panel)}
@@ -61,8 +62,9 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
 .grp h4::after{content:"";flex:1;height:1px;background:var(--line)}
 .guns h4{color:var(--a)}
 .slots{display:grid;gap:5px;grid-auto-flow:column;grid-auto-columns:1fr}
-.card{position:relative;min-width:0;height:88px;border-radius:14px;border:1px solid var(--line);background:var(--panel);padding:8px 4px 10px;display:flex;flex-direction:column;align-items:center;gap:4px;overflow:hidden;box-shadow:0 2px 0 var(--line);transition:transform .1s}
+.card{position:relative;min-width:0;height:100px;border-radius:14px;border:1px solid var(--line);background:var(--panel);padding:8px 4px 10px;display:flex;flex-direction:column;align-items:center;gap:4px;overflow:hidden;box-shadow:0 2px 0 var(--line);transition:transform .1s}
 .card b{font-weight:800;font-size:12px;line-height:1.1;text-align:center}
+.card small{font-size:9.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);line-height:1}
 .card:disabled{opacity:.5;cursor:default}
 .card.sel{transform:translateY(-4px);border-color:var(--fg);box-shadow:0 0 0 2px var(--fg)}
 .card.gun{background:linear-gradient(color-mix(in srgb,var(--a) 20%,var(--panel)),var(--panel) 70%);border-color:color-mix(in srgb,var(--a) 45%,var(--line))}
@@ -103,6 +105,8 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
 .rival span{color:var(--muted);font-size:13.5px}
 .mods{display:flex;gap:5px;flex-wrap:wrap}
 .mods span{font-size:12px;font-weight:800;padding:4px 9px;border-radius:999px;background:var(--bg2);color:var(--muted)}
+#roles{display:grid;grid-template-columns:repeat(5,1fr);gap:4px}
+#roles span{padding:4px 0;text-align:center;font-size:11.5px;white-space:nowrap}
 .list{display:flex;flex-direction:column;gap:6px}
 .opt{display:flex;align-items:center;gap:10px;text-align:left;background:none;border:1px solid var(--line);border-radius:14px;padding:8px 10px;min-width:0}
 .opt > div{min-width:0;flex:1}
@@ -134,6 +138,10 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
 .btn.go{background:var(--a);border-color:var(--a);color:#06231A;font-family:var(--display);font-size:20px;font-weight:400;box-shadow:0 3px 0 color-mix(in srgb,var(--a) 60%,#000)}
 .btn:hover{border-color:var(--fg)}
 .btn:disabled{opacity:.5;cursor:default}
+.pay{display:flex;flex-direction:column;gap:5px;border:1px solid var(--line);border-radius:14px;padding:10px 12px}
+.pay div{display:flex;justify-content:space-between;gap:10px;font-size:13.5px;color:var(--muted)}
+.pay b{color:var(--gold);font-weight:800}
+.pay .sum{border-top:1px solid var(--line);padding-top:6px;color:var(--fg);font-weight:800}
 .stars{font-size:40px;letter-spacing:.1em;line-height:1;color:var(--gold);text-align:center}
 .over h2,.over p{text-align:center}
 .card.troop{background:linear-gradient(color-mix(in srgb,var(--org) 22%,var(--panel)),var(--panel) 70%);border-color:color-mix(in srgb,var(--org) 45%,var(--line))}
@@ -168,7 +176,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
   </header>
   <section class="score" aria-label="Score">
     <div class="who you"><b>You</b><span class="num" id="pct-a">50%</span></div>
-    <div class="clock num" id="clock">75</div>
+    <div class="clock num" id="clock">2:30</div>
     <div class="who foe"><span class="num" id="pct-b">50%</span><b id="foe-name">Rival</b></div>
     <div class="share" aria-hidden="true"><span id="share"></span><i></i></div>
   </section>
@@ -209,7 +217,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
       <h3>Coming up</h3>
       <p id="home-next"></p>
     </div>
-    <div class="pane" id="tab-guns" hidden><h3 id="guns-head"></h3><div class="strip" id="guns-strip"></div><div class="chips four" id="fkinds"></div><div class="list" id="guns-list"></div></div>
+    <div class="pane" id="tab-guns" hidden><h3 id="guns-head"></h3><div class="strip" id="guns-strip"></div><div class="mods" id="roles"></div><p id="role-tip"></p><div class="chips four" id="fkinds"></div><div class="list" id="guns-list"></div></div>
     <div class="pane" id="tab-fx" hidden><h3 id="fx-head"></h3><div class="strip" id="fx-strip"></div><div class="chips" id="kinds"></div><div class="list" id="fx-list"></div></div>
     <div class="pane" id="tab-workshop" hidden><h3>Upgrades</h3><div class="list" id="upgrades"></div><h3>Settings</h3><div class="list" id="settings"></div></div>
     <div class="row"><button class="btn go" id="btn-play">Play</button></div>
@@ -221,6 +229,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
     <div class="stars" id="over-stars"></div>
     <h2 id="over-title"></h2>
     <p id="over-sub"></p>
+    <div class="pay" id="over-pay"></div>
     <div class="row">
       <button class="btn" id="over-home">Workshop</button>
       <button class="btn go" id="over-next">Next stage</button>
@@ -243,23 +252,25 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
 (() => {
 'use strict';
 const $ = id => document.getElementById(id);
-const COLS = 22, ROWS = 36, N = COLS*ROWS, TIME = 75;
+const COLS = 22, ROWS = 36, N = COLS*ROWS;
+/* Pace: a 2:30 match, shots and movement at 55% of their raw speed, and double energy for the last 45 seconds. */
+const TIME = 150, PACE = .55, SURGE = 45;
 /* Cannons: gap = seconds between shots, hp = hits it survives */
 const UNITS = {
-  sentry:  { gap:.16, hp:12, speed:22 },
-  sweeper: { gap:.1,  hp:10, speed:20 },
-  scatter: { gap:.7,  hp:11, speed:18 },
-  bouncer: { gap:.13, hp:10, speed:20 },
-  pike:    { gap:1.6, hp:10 },
+  sentry:  { gap:.16, hp:16, speed:22 },
+  sweeper: { gap:.09, hp:8,  speed:20 },
+  scatter: { gap:.7,  hp:9,  speed:18 },
+  bouncer: { gap:.13, hp:8,  speed:20 },
+  pike:    { gap:1.6, hp:8 },
   bastion: { gap:.4,  hp:36, speed:20 },
-  twin:    { gap:.2,  hp:14, speed:22 },
-  mortar:  { gap:1.3, hp:9 },
-  rattler: { gap:.06, hp:7,  speed:24 },
+  twin:    { gap:.2,  hp:18, speed:22 },
+  mortar:  { gap:1.3, hp:8 },
+  rattler: { gap:.06, hp:6,  speed:24 },
   flak:    { gap:.14, hp:12 },
-  spinner: { gap:.07, hp:8,  speed:18 },
+  spinner: { gap:.07, hp:10, speed:18 },
   mender:  { gap:.8,  hp:10 },
   hunter:  { gap:1,   hp:10, speed:22 },
-  rail:    { gap:2.6, hp:9 }
+  rail:    { gap:2.6, hp:8 }
 };
 /* Troops walk up the field taking ground; dragons (fly) cross over everything and burn a path.
    spd = tiles per second, gap = seconds between hits, w = half-width of the path a troop clears, rad = breath radius */
@@ -273,6 +284,13 @@ const MOB = {
   elder:  { fly:true, hp:30, spd:1.6, gap:.3,  rad:2 }
 };
 const isForce = id => !!(UNITS[id] || MOB[id]);
+/* Every force has one job. A deck wants at least an Anchor and a Pusher. */
+const ROLE = { sentry:'Anchor', twin:'Anchor', bastion:'Anchor', brute:'Anchor',
+  sweeper:'Pusher', scatter:'Pusher', bouncer:'Pusher', rattler:'Pusher', runner:'Pusher', squad:'Pusher',
+  pike:'Siege', mortar:'Siege', rail:'Siege', drake:'Siege', elder:'Siege',
+  hunter:'Killer', sapper:'Killer',
+  flak:'Support', mender:'Support', spinner:'Support', wyrm:'Support' };
+const ROLEHELP = { Anchor:'holds ground and soaks hits', Pusher:'takes ground fast but dies fast', Siege:'reaches deep but reloads slowly', Killer:'removes rival forces', Support:'protects and repairs the others' };
 const hpOf = type => (UNITS[type] || MOB[type]).hp;
 const lookOf = id => UNITS[id] ? 'gun' : MOB[id] && MOB[id].fly ? 'drg' : MOB[id] ? 'troop' : '';
 /* aim: 'own' = must land on your tiles, 'any' = anywhere, 'none' = plays the moment you tap the card */
@@ -281,8 +299,8 @@ const CARDS = {
   sweeper:  { name:'Sweeper',   cost:4, unlock:1, kind:'Cannon', aim:'own', r:1, desc:'Sweeps side to side' },
   scatter:  { name:'Scatter',   cost:4, unlock:1, kind:'Cannon', aim:'own', r:1, desc:'Bursts of five in a cone' },
   bouncer:  { name:'Bouncer',   cost:4, unlock:1, kind:'Cannon', aim:'own', r:1, desc:'Diagonal shots that bounce off the sides' },
-  pike:     { name:'Pike',      cost:4, unlock:2, kind:'Cannon', aim:'own', r:1, desc:'Piercing beam, 10 tiles deep' },
-  bastion:  { name:'Bastion',   cost:5, unlock:3, kind:'Cannon', aim:'own', r:1, desc:'Slow gun with triple health' },
+  pike:     { name:'Pike',      cost:4, unlock:2, kind:'Cannon', aim:'own', r:1, desc:'Piercing beam, 12 tiles deep' },
+  bastion:  { name:'Bastion',   cost:5, unlock:3, kind:'Cannon', aim:'own', r:1, desc:'Tough gun that shields cannons near it' },
   twin:     { name:'Twin',      cost:5, unlock:4, kind:'Cannon', aim:'own', r:1, desc:'Two barrels side by side' },
   mortar:   { name:'Mortar',    cost:5, unlock:5, kind:'Cannon', aim:'own', r:1, desc:'Lobs shells far ahead' },
   rattler:  { name:'Rattler',   cost:5, unlock:5, kind:'Cannon', aim:'own', r:1, desc:'Very fast, short range, fragile' },
@@ -400,7 +418,7 @@ const UPG = {
 };
 const NG = 5, NF = 6, HG = 2, HF = 3, HAND = HG + HF, MAXE = 10, MAXRANK = 9, MAXUNITS = 8, DONE = 5;
 const cost = (k, r) => Math.round(40*(r + 1)*Math.pow(1.45, r));
-const rcost = r => 20 + 15*r*r;   // coins to go from level r+1 to r+2
+const rcost = r => 10 + 6*r*r;   // coins to go from level r+1 to r+2
 const lvPow = r => 1 + .1*r;        // every level adds 10%
 const f1 = v => String(Math.round(v*10)/10);
 /* What a card does at rank index r (0 = rank 1), in a few words. */
@@ -491,7 +509,7 @@ function boom(v = .12, d = .28){
 }
 const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
 function shake(v){ if (M && !still) M.shake = Math.max(M.shake || 0, v); }
-function tick(side){ const n = performance.now(); if (n - lastTick < 70) return; lastTick = n; tone(side ? 190 : 520 + Math.random()*120, .04, 'square', .016); }
+function tick(side){ const n = performance.now(); if (n - lastTick < 120) return; lastTick = n; tone(side ? 190 : 520 + Math.random()*120, .04, 'triangle', .012); }
 
 /* ---------- match ---------- */
 let M = null, paused = false, aiming = false;
@@ -518,8 +536,8 @@ function newMatch(idle){
     owner, hp, mine, flash, lost:[[], []], note:null, bullets:[], units:[], beams:[], shells:[], puffs:[], temps:[], last:[null, null],
     gq:shuffle(P.guns), fq:shuffle(P.fx), foe, foeNext:foe.find(k => UNITS[k]), handKey:'',
     sides:[
-      { rate:1 + .07*P.up.rapid, flow:.8*(1 + .1*P.up.dynamo), energy:5, over:0, frozen:0, shield:0, cap:0, heavy:0, wide:0, lock:0 },
-      { rate:Math.min(1.15, .65 + .04*n), flow:Math.min(.78, .26 + .04*n)*who.tune, energy:2, over:0, frozen:0, shield:0, cap:0, heavy:0, wide:0, lock:0 }
+      { rate:1 + .07*P.up.rapid, flow:.42*(1 + .1*P.up.dynamo), energy:5, over:0, frozen:0, shield:0, cap:0, heavy:0, wide:0, lock:0 },
+      { rate:Math.min(1.15, .65 + .04*n), flow:Math.min(.36, .2 + .016*n)*who.tune, energy:2, over:0, frozen:0, shield:0, cap:0, heavy:0, wide:0, lock:0 }
     ] };
   const put = (side, type, c, back, mul = 1) => addUnit(side, type, c + .5, base(side) + fwd(side)*back + .5, mul);
   if (idle){ for (const side of [0, 1]){ put(side, 'sweeper', 5, 5, 50); put(side, 'sentry', 11, 3, 50); put(side, 'sweeper', 16, 5, 50); } }
@@ -588,7 +606,7 @@ function beamUp(u, reach, dmg){
 }
 function fireUnit(u){
   const U = UNITS[u.type], f = fwd(u.side), k = u.type;
-  if (k === 'pike') beamUp(u, 10, 2);
+  if (k === 'pike') beamUp(u, 12, 2);
   else if (k === 'rail') beamUp(u, 30, 3);
   else if (k === 'mortar') M.shells.push({ side:u.side, x0:u.x, y0:u.y, x1:clamp(u.x + (Math.random()*6 - 3), .5, COLS - .5), y1:clamp(u.y + f*(9 + Math.random()*7), .5, ROWS - .5), t:0, dur:.75 });
   else if (k === 'twin'){ bullet(u.side, u.x - .55, u.y, 0, U.speed); bullet(u.side, u.x + .55, u.y, 0, U.speed); }
@@ -604,7 +622,7 @@ function fireUnit(u){
   else if (k === 'mender'){ for (const v of M.units) if (v.side === u.side && v !== u && v.hp < v.max && (v.x - u.x)**2 + (v.y - u.y)**2 <= 36){ v.hp++; M.puffs.push({ x:v.x, y:v.y, t:.2, side:u.side }); } }
   else if (k === 'hunter'){
     const v = nearestUnit(1 - u.side, u.x, u.y, 20);
-    if (v && M.sides[v.side].shield <= 0){ M.beams.push({ x0:u.x, y0:u.y, x1:v.x, y1:v.y, side:u.side, t:.22, w:.6 }); hurt(v, 2, u.side); }
+    if (v && M.sides[v.side].shield <= 0){ M.beams.push({ x0:u.x, y0:u.y, x1:v.x, y1:v.y, side:u.side, t:.22, w:.6 }); hurt(v, 3, u.side); }
     else if (!v) bullet(u.side, u.x, u.y, 0, U.speed);
   }
   else bullet(u.side, u.x, u.y, u.ang, U.speed);
@@ -622,7 +640,7 @@ function moveMob(u, dt){
     return;
   }
   const c = Math.floor(u.x), r = Math.floor(u.y), nr = r + f;
-  if (!inb(c, nr)) return;                       // reached the far edge: hold the tile
+  if (!inb(c, nr)){ blast(u.side, c, r, 2, 2); kill(u, true); M.note = { text:'Breakthrough', side:u.side, t:1 }; return; }   // reached the far edge: break through and leave
   const i = nr*COLS + c, o = M.owner[i], wall = o === 2 && M.tw[i] !== u.side, ahead = unitAt(i);
   if (!wall && (o === u.side || o === 2) && !(ahead && ahead !== u)){ u.y += f*T.spd*dt; return; }
   if (u.cd > 0) return;
@@ -744,6 +762,7 @@ function rival(){
   const again = () => { M.foeNext = M.foe[Math.floor(Math.random()*M.foe.length)]; };
   const theirs = gunsOf(1);
   if (UNITS[id] && theirs.length >= MAXUNITS && theirs.every(u => u.hp/u.max > .5)){ again(); return; }
+  if (MOB[id] && M.units.filter(u => u.side === 1 && MOB[u.type]).length >= 5){ again(); return; }
   let best = 0, bv = -1;
   for (let c = 0; c < COLS; c++){ let k = 0; for (let r = 0; r < ROWS; r++) if (!M.owner[r*COLS + c]) k++; const v = k + Math.random()*10; if (v > bv){ bv = v; best = c; } }
   let fr = frontRow(1, best); if (fr < 0) fr = ROWS - 1;
@@ -762,6 +781,7 @@ function rival(){
   R.energy -= C.cost; cast(1, id, x, y); again();
 }
 function step(dt){
+  const d = dt*PACE;   // shots, reloads and movement run on the slowed clock; card timers and the match clock run in real time
   if (M.coach < DONE){
     const pick = slot(M.sel);
     if (M.coach < 2 && M.units.filter(u => u.side === 0).length > 1) M.coach = 2;
@@ -772,26 +792,28 @@ function step(dt){
   if (M.shake > 0) M.shake -= dt;
   for (let k = M.floats.length - 1; k >= 0; k--){ M.floats[k].t -= dt; if (M.floats[k].t <= 0) M.floats.splice(k, 1); }
   if (!M.idle && M.coach >= 2){ M.t -= dt; rival(); }
+  if (!M.idle && !M.surged && M.t <= SURGE){ M.surged = true; M.note = { text:'Surge: double energy', side:0, t:2.2 }; tone(523, .15, 'triangle', .05); tone(784, .2, 'triangle', .05, .1); }
   M.sides.forEach((S, side) => {
     for (const k of ['over','frozen','shield','cap','heavy','wide','lock']) if (S[k] > 0) S[k] -= dt;
     // the side holding less ground gets up to 40% more energy
     const behind = clamp(((side ? M.share : 1 - M.share) - .5)*1.6, 0, .4);
-    if (!M.idle) S.energy = Math.min(MAXE, S.energy + S.flow*dt*(S.cap > 0 ? 2 : 1)*(1 + behind));
+    if (!M.idle) S.energy = Math.min(MAXE, S.energy + S.flow*dt*(S.cap > 0 ? 2 : 1)*(1 + behind)*(M.t <= SURGE ? 2 : 1));
   });
   for (let k = M.units.length - 1; k >= 0; k--){
-    const u = M.units[k], S = M.sides[u.side];
+    const u = M.units[k]; if (!u) continue;   // a blast earlier in this pass can remove several at once
+    const S = M.sides[u.side];
     if (u.hit > 0) u.hit -= dt;
     if (u.frz > 0) u.frz -= dt;
     if (u.acc > 0){ u.accT -= dt; if (u.accT <= 0){ M.floats.push({ x:u.x, y:u.y, text:'-' + u.acc, t:.7 }); u.acc = 0; u.accT = .45; } }
     if (S.frozen > 0 || u.frz > 0) continue;
-    if (MOB[u.type]){ moveMob(u, dt); continue; }
-    u.t += dt;
+    if (MOB[u.type]){ moveMob(u, d); continue; }
+    u.t += d;
     if (u.type === 'sweeper') u.ang = Math.sin(u.t*1.7)*.95; else if (u.type === 'spinner') u.ang = u.t*3.2;
-    u.cd -= dt; if (u.cd <= 0){ u.cd = UNITS[u.type].gap/(S.rate*(S.over > 0 ? 2 : 1)); fireUnit(u); }
+    u.cd -= d; if (u.cd <= 0){ u.cd = UNITS[u.type].gap/(S.rate*(S.over > 0 ? 2 : 1)); fireUnit(u); }
   }
   for (let k = M.bullets.length - 1; k >= 0; k--){
     const b = M.bullets[k];
-    b.x += b.vx*dt; b.y += b.vy*dt; b.ttl -= dt;
+    b.x += b.vx*d; b.y += b.vy*d; b.ttl -= d;
     if (b.x < 0){ b.x = -b.x; b.vx = -b.vx; } else if (b.x > COLS){ b.x = 2*COLS - b.x; b.vx = -b.vx; }
     const r = Math.floor(b.y), c = clamp(Math.floor(b.x), 0, COLS - 1);
     if (r < 0 || r >= ROWS || b.ttl <= 0){ M.bullets.splice(k, 1); continue; }
@@ -802,14 +824,15 @@ function step(dt){
     let dead = true;
     if (o !== 2 && strike(i, b.side)){
       // a shot that takes ground within 3 tiles of a rival cannon also chips that cannon
-      for (const u of M.units) if (u.side !== b.side && UNITS[u.type] && (u.x - b.x)**2 + (u.y - b.y)**2 <= 9 && M.sides[u.side].shield <= 0){ hurt(u, 1, b.side); break; }
+      const v = M.units.find(u => u.side !== b.side && UNITS[u.type] && (u.x - b.x)**2 + (u.y - b.y)**2 <= 9);
+      if (v && M.sides[v.side].shield <= 0){ const g = M.units.find(q => q.side === v.side && q.type === 'bastion' && (q.x - v.x)**2 + (q.y - v.y)**2 <= 16); hurt(g || v, 1, b.side); }   // a Bastion within 4 tiles takes the chip instead
       if (M.sides[b.side].wide > 0){ if (c > 0) strike(i - 1, b.side); if (c < COLS - 1) strike(i + 1, b.side); }
       dead = --b.pierce < 0;
     }
     if (dead) M.bullets.splice(k, 1);
   }
   for (let k = M.shells.length - 1; k >= 0; k--){
-    const q = M.shells[k]; q.t += dt;
+    const q = M.shells[k]; q.t += d;
     if (q.t >= q.dur){ blast(q.side, Math.floor(q.x1), Math.floor(q.y1), 2, 3); tone(110, .14, 'sine', .04); M.puffs.push({ x:q.x1, y:q.y1, t:.3, side:q.side }); M.shells.splice(k, 1); }
   }
   for (let k = M.temps.length - 1; k >= 0; k--){ const q = M.temps[k]; q.t -= dt; if (q.t <= 0){ if (M.owner[q.i] === 2) M.owner[q.i] = q.side; M.tw[q.i] = -1; M.flash[q.i] = .4; M.temps.splice(k, 1); } }
@@ -831,7 +854,10 @@ function finish(s){
   P.coins += paid; P.stars[P.level] = Math.max(P.stars[P.level] || 0, stars);
   $('over-stars').textContent = '★'.repeat(stars) + '☆'.repeat(3 - stars);
   $('over-title').textContent = won ? (s >= .88 ? 'Clean sweep' : 'Stage cleared') : s === .5 ? 'Dead heat' : 'Line lost';
-  $('over-sub').textContent = `You held ${pct}% of the field and earned ${paid} coins` + (fresh ? '.' : ' (half pay for a replay).') + (hitGoal ? ` Goal met: +${goalPay(P.level)}.` : '') + (won && P.streak > 1 ? ` Win streak of ${P.streak}: +${Math.min(25, 5*(P.streak - 1))}.` : '') + (won ? '' : ' Spend them on card levels and try again.');
+  const base = fresh ? earned : Math.round(earned/2), streakPay = won ? Math.min(25, 5*(P.streak - 1)) : 0;
+  $('over-sub').textContent = `You held ${pct}% of the field.` + (won ? '' : ' Spend your coins on card levels and try again.');
+  $('over-pay').innerHTML = [[won ? (M.boss ? 'Boss stage win' : 'Stage win') + (fresh ? '' : ' (replay, half pay)') : 'Consolation', base], won && fresh && ['First clear', 20], hitGoal && ['Goal: ' + goal.text, goalPay(P.level)], streakPay > 0 && [`Win streak of ${P.streak}`, streakPay], ['Total', paid]]
+    .filter(Boolean).map(([k, v], i, all) => `<div${i === all.length - 1 ? ' class="sum"' : ''}><span>${k}</span><b class="num">+${v}</b></div>`).join('');
   $('over-next').textContent = won ? 'Next stage' : 'Retry';
   if (won){ if (fresh) P.best = P.level + 1; P.level = Math.min(P.best, P.level + 1); [523,659,784,1047].forEach((f, i) => tone(f, .2, 'triangle', .06, i*.1)); }
   else [392,330,262].forEach((f, i) => tone(f, .24, 'sine', .06, i*.13));
@@ -928,7 +954,7 @@ function draw(){
   for (let i = 0; i < N; i++) if (M.mine[i]){ const x = X(i) + t/2, y = Y(i) + t/2; ctx.moveTo(x + t*.28, y); ctx.arc(x, y, t*.28, 0, 7); }
   ctx.fill();
   ctx.fillStyle = '#fff';
-  for (let i = 0; i < N; i++) if (M.flash[i] > 0){ ctx.globalAlpha = M.flash[i]*.7; ctx.fillRect(X(i), Y(i), t, t); }
+  for (let i = 0; i < N; i++) if (M.flash[i] > 0){ ctx.globalAlpha = M.flash[i]*.42; ctx.fillRect(X(i), Y(i), t, t); }
   ctx.globalAlpha = 1;
   // the front line between the two sides
   ctx.strokeStyle = fg; ctx.lineWidth = Math.max(1.5, t*.16); ctx.lineCap = 'round'; ctx.beginPath();
@@ -945,7 +971,7 @@ function draw(){
     ctx.strokeStyle = '#fff'; ctx.lineWidth = t*b.w*.3; ctx.stroke(); ctx.globalAlpha = 1;
   }
   ctx.lineWidth = Math.max(1, t*.12);
-  for (const b of M.bullets){ ctx.beginPath(); ctx.arc(gx + b.x*t, gy + b.y*t, Math.max(2.5, t*.34), 0, 7); ctx.fillStyle = col[b.side]; ctx.fill(); ctx.strokeStyle = fg; ctx.stroke(); }
+  for (const b of M.bullets){ ctx.beginPath(); ctx.arc(gx + b.x*t, gy + b.y*t, Math.max(2, t*.27), 0, 7); ctx.fillStyle = col[b.side]; ctx.fill(); ctx.strokeStyle = fg; ctx.stroke(); }
   for (const u of M.units) if (!MOB[u.type]) drawUnit(u, col[u.side], fg, bg, ice, line);
   for (const u of M.units) if (MOB[u.type] && !u.fly) drawMob(u, col[u.side], fg, bg, ice);
   for (const u of M.units) if (u.fly) drawMob(u, col[u.side], fg, bg, ice);
@@ -991,13 +1017,14 @@ function hud(){
   const s = share(), pa = Math.round(s*100), A = M.sides[0];
   $('share').style.width = (s*100) + '%';
   $('pct-a').textContent = pa + '%'; $('pct-b').textContent = (100 - pa) + '%';
-  const secs = Math.max(0, Math.ceil(M.t)); $('clock').textContent = secs; $('clock').classList.toggle('low', !M.idle && secs <= 10);
+  const secs = Math.max(0, Math.ceil(M.t)); $('clock').textContent = Math.floor(secs/60) + ':' + String(secs % 60).padStart(2, '0');
+  $('clock').classList.toggle('low', !M.idle && secs <= 10); $('clock').classList.toggle('surge', !M.idle && secs <= SURGE && secs > 10);
   $('energy').style.width = (A.energy*10) + '%';
   $('energy-n').textContent = Math.floor(A.energy);
   const key = M.gq.slice(0, HG).join() + '|' + M.fq.slice(0, HF + 1).join() + M.sel + M.idle + M.coach + gunsOf(0).length;
   if (key !== M.handKey){
     M.handKey = key;
-    for (let k = 0; k < HAND; k++){ const id = slot(k), c = CARDS[id]; $('pow-' + k).className = 'card ' + lookOf(id); $('pow-' + k).innerHTML = c ? `${ic(id)}<u>L${(P.rank[id] || 0) + 1}</u><i class="cost">${c.cost}</i><b>${c.name}</b><span class="meter"><span></span></span>` : ''; $('pow-' + k).setAttribute('aria-label', c ? `${c.name}, ${c.cost} energy. ${c.desc}` : 'Empty'); }
+    for (let k = 0; k < HAND; k++){ const id = slot(k), c = CARDS[id]; $('pow-' + k).className = 'card ' + lookOf(id); $('pow-' + k).innerHTML = c ? `${ic(id)}<u>L${(P.rank[id] || 0) + 1}</u><i class="cost">${c.cost}</i><b>${c.name}</b><small>${ROLE[id] || c.kind}</small><span class="meter"><span></span></span>` : ''; $('pow-' + k).setAttribute('aria-label', c ? `${c.name}, ${c.cost} energy. ${c.desc}` : 'Empty'); }
     const sel = CARDS[slot(M.sel)], next = CARDS[M.fq[HF]];
     const coach = ['Step 1 of 5: tap a card on the left. Those are your forces.', 'Step 2 of 5: press on your own ground, drag to aim, let go to place it.', 'Step 3 of 5: now play an effect card from the right.', 'Step 4 of 5: the ring round a cannon is its health. Shots landing near it wear it down.', 'Step 5 of 5: the gold bar is energy. Fall behind and it fills faster.'][M.coach];
     $('foe-name').textContent = M.who.name;
@@ -1044,7 +1071,7 @@ let held = false, holdT = 0;
 function showTip(k){
   const id = slot(k), c = CARDS[id]; if (!c) return;
   const r = P.rank[id] || 0, st = stat(id, r);
-  $('tip').innerHTML = `<b>${c.name} · ${c.kind} · ${c.cost} energy · level ${r + 1}</b><small>${c.desc}.${st ? ' Now: ' + st + '.' : ''} ${c.aim === 'none' ? 'Plays the moment you tap it.' : c.aim === 'own' ? 'Goes on your own ground.' : 'Aim it anywhere.'}</small>`;
+  $('tip').innerHTML = `<b>${c.name} · ${ROLE[id] ? ROLE[id] + ' ' + c.kind.toLowerCase() : c.kind} · ${c.cost} energy · level ${r + 1}</b><small>${c.desc}.${ROLE[id] ? ' ' + ROLE[id] + ': ' + ROLEHELP[ROLE[id]] + '.' : ''}${st ? ' Now: ' + st + '.' : ''} ${c.aim === 'none' ? 'Plays the moment you tap it.' : c.aim === 'own' ? 'Goes on your own ground.' : 'Aim it anywhere.'}</small>`;
   $('tip').hidden = false; held = true;
 }
 for (let k = 0; k < HAND; k++){
@@ -1061,7 +1088,7 @@ function pause(on){
 document.addEventListener('visibilitychange', () => { if (document.hidden) pause(true); });
 
 /* ---------- saving a match in progress ---------- */
-const MKEY = 'flipfire.match3';
+const MKEY = 'flipfire.match4';
 function saveMatch(){
   if (!live() || M.coach < DONE) return;
   try { localStorage.setItem(MKEY, JSON.stringify({ ...M, level:P.level, owner:Array.from(M.owner), hp:Array.from(M.hp), mine:Array.from(M.mine), tw:Array.from(M.tw), flash:0 })); } catch {}
@@ -1085,7 +1112,7 @@ function chrome(){
 function cardRow(k){
   const c = CARDS[k], gun = isForce(k), list = gun ? P.guns : P.fx, cap = gun ? NG : NF;
   const open = P.best >= c.unlock, on = list.includes(k), r = P.rank[k] || 0, full = r >= MAXRANK || !!c.norank, st = stat(k, r);
-  return `<div class="cardrow"><button class="opt${on ? ' sel' : ''}" data-card="${k}" ${open && (on || list.length < cap) ? '' : 'disabled'}>${ic(k)}<div><b>${c.name} · ${c.cost} · L${r + 1}</b><small>${c.desc}</small>${st ? `<small class="st">${st}${full ? '' : ' → ' + stat(k, r + 1)}</small>` : ''}</div><em>${!open ? 'Stage ' + c.unlock : on ? 'In deck' : 'Add'}</em></button>`
+  return `<div class="cardrow"><button class="opt${on ? ' sel' : ''}" data-card="${k}" ${open && (on || list.length < cap) ? '' : 'disabled'}>${ic(k)}<div><b>${c.name} · ${c.cost} · L${r + 1}</b><small>${ROLE[k] ? ROLE[k] + ' · ' : ''}${c.desc}</small>${st ? `<small class="st">${st}${full ? '' : ' → ' + stat(k, r + 1)}</small>` : ''}</div><em>${!open ? 'Stage ' + c.unlock : on ? 'In deck' : 'Add'}</em></button>`
     + `<button class="rk" data-rank="${k}" aria-label="Level up ${c.name}" ${open && !full && P.coins >= rcost(r) ? '' : 'disabled'}>${c.norank ? 'No levels' : full ? 'Level ' + (r + 1) : 'Level up'}<small class="num">${c.norank ? '–' : full ? 'max' : rcost(r) + ' coins'}</small></button></div>`;
 }
 function home(){
@@ -1101,7 +1128,7 @@ function home(){
   $('home-goal').className = 'goal' + (gdone ? ' done' : '');
   $('home-goal').innerHTML = `<div><b>Stage goal</b><br>${goal.text}</div><em>${gdone ? 'Done' : '+' + goalPay(P.level) + ' coins'}</em>`;
   $('daily').innerHTML = P.day === today() ? '' : `<button class="opt sel" data-daily="1">${ic('spark')}<div><b>Daily reward</b><small>Come back each day for more</small></div><em>Claim 60 coins</em></button>`;
-  $('home-how').innerHTML = [['sentry', 'Cannons hold ground. They fire until their health is shot down.'], ['runner', 'Troops walk up the field taking tiles. Dragons fly over everything.'], ['splash', 'Effects happen once. Strikes land where you aim.'], ['capacitor', `Energy pays for cards. Hold more ground after ${TIME} seconds to win.`]]
+  $('home-how').innerHTML = [['sentry', 'Cannons hold ground. They fire until their health is shot down.'], ['runner', 'Troops walk up the field taking tiles. Dragons fly over everything.'], ['splash', 'Effects happen once. Strikes land where you aim.'], ['capacitor', 'Energy pays for cards and doubles for the last 45 seconds. Hold more ground when the 2:30 clock runs out.']]
     .map(([k, tx]) => `<div>${ic(k)}<span>${tx}</span></div>`).join('');
   const later = Object.values(CARDS).map(c => c.unlock).filter(u => u > P.best), nextAt = later.length ? Math.min(...later) : 0;
   $('home-next').textContent = nextAt ? `Clear stage ${nextAt - 1} to unlock ${Object.values(CARDS).filter(c => c.unlock === nextAt).map(c => c.name).join(' and ')}.` : 'Every card is unlocked.';
@@ -1109,6 +1136,9 @@ function home(){
   $('guns-head').textContent = `Forces · ${P.guns.length} of ${NG} chosen`;
   $('fkinds').innerHTML = FKINDS.map(k => `<button class="chipb${fkindF === k ? ' on' : ''}" data-fkind="${k}">${k}</button>`).join('');
   $('guns-strip').innerHTML = P.guns.map(ic).join('') + '<span class="gap"></span>'.repeat(NG - P.guns.length);
+  const mix = {}; P.guns.forEach(k => { mix[ROLE[k]] = (mix[ROLE[k]] || 0) + 1; });
+  $('roles').innerHTML = Object.keys(ROLEHELP).map(k => `<span${mix[k] ? '' : ' style="opacity:.45"'}>${mix[k] || 0} ${k}</span>`).join('');
+  $('role-tip').textContent = !mix.Anchor ? 'No Anchor: nothing in this deck holds ground. Sentry, Twin, Bastion and Brute do.' : !mix.Pusher ? 'No Pusher: this deck will hold but struggle to take ground. Sweeper, Scatter and Runner do.' : !mix.Siege && !mix.Killer ? 'Tip: a Siege or Killer force helps you break cannons dug in behind the line.' : 'Balanced: you have something to hold, something to push and something to break through.';
   $('guns-list').innerHTML = ids.filter(k => isForce(k) && (fkindF === 'All' || CARDS[k].kind === fkindF)).map(cardRow).join('');
   $('fx-head').textContent = `Effects · ${P.fx.length} of ${NF} chosen`;
   $('fx-strip').innerHTML = P.fx.map(ic).join('') + '<span class="gap"></span>'.repeat(NF - P.fx.length);
