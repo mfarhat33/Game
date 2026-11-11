@@ -13,11 +13,11 @@ Modes: Skirmish against 1–3 computer rivals (three skill levels, three board s
 
 An original real-time tile battle in `flipfire.html`; open it in a browser to play.
 
-- The field is a 22 by 36 grid split between you and a rival. Pick a card from your hand, then tap the board to play it there.
-- Turret cards (Sentry, Sweeper, Pike, Mortar, Spinner, Twin, Flak) go anywhere on your own tiles. A turret is lost when the rival takes the tile under it.
-- Strike cards land where you tap; boosts and tricks play the moment you tap the card.
-- Build an 8-card deck from 36 cards, each with its own icon. Energy fills over time; you hold four cards at once.
+- The field is a 22 by 36 grid split between you and a rival. Pick a card, press on the board, drag to aim and let go.
+- Cannon cards (14 kinds) build a gun anywhere on your own ground. A cannon has health and keeps firing until the rival shoots it down.
+- Effect cards (29: strikes, guards, boosts, tricks) happen once.
+- You bring 4 cannons and 6 effects, and hold 2 cannons and 3 effects at a time. Energy fills over time; the side holding less ground gains it faster.
 - Scrap earned each stage buys workshop upgrades and raises individual cards up to rank 4.
-- Five named rivals rotate by stage, each with its own deck and habits. Later stages add plated tiles and walls; every fifth stage is a boss stage.
-- Press, drag and release to aim. Cleared stages can be replayed, an unfinished match resumes after a reload, and there is an option to stripe the rival's tiles.
+- Five named rivals rotate by stage. Later stages add plated tiles and walls; every fifth stage is a boss stage.
+- Cleared stages can be replayed, an unfinished match resumes after a reload, and there is an option to stripe the rival's tiles.
 - Hold more of the field after 75 seconds to win.
