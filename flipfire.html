@@ -36,7 +36,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
 .share span{display:block;height:100%;background:var(--a);width:50%}
 .clock{font-family:var(--display);font-size:20px;min-width:2.2em;text-align:right}
 .field{flex:1 1 auto;min-height:260px;position:relative}
-.field canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:ew-resize}
+.field canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:crosshair}
 
 .tray{display:flex;flex-direction:column;gap:6px}
 .erow{display:flex;align-items:center;gap:8px;font-weight:800;font-size:13px}
@@ -155,7 +155,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
 <div class="veil" id="dlg-pause" hidden>
   <div class="sheet">
     <h2>Paused</h2>
-    <p>Pick a card, then tap the lane you want it in. On a keyboard: 1 to 4 pick a card, the arrow keys move the lane, Enter plays it.</p>
+    <p>Pick a card, then tap the board where you want it. On a keyboard: 1 to 4 pick a card, the arrow keys move the target, Enter plays it.</p>
     <div class="row">
       <button class="btn" id="pause-quit">Quit stage</button>
       <button class="btn go" id="pause-resume">Resume</button>
@@ -167,60 +167,62 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
 (() => {
 'use strict';
 const $ = id => document.getElementById(id);
-const COLS = 11, ROWS = 18, TIME = 75;
-const CANNONS = {
-  tapper:   { name:'Tapper',   unlock:1, gap:.15, speed:16, desc:'Quick single shots. Easy to steer.' },
-  fork:     { name:'Fork',     unlock:2, gap:.42, speed:14, desc:'Three shots in a fan. Wide, loose.' },
-  lance:    { name:'Lance',    unlock:4, gap:.5,  speed:26, desc:'One bolt that drills four tiles deep.' },
-  mortar:   { name:'Mortar',   unlock:6, gap:.95, speed:9,  desc:'Slow shell that flips a 3 by 3 patch.' },
-  ricochet: { name:'Ricochet', unlock:8, gap:.14, speed:14, desc:'Angled shots that bounce off the walls.' }
+const COLS = 22, ROWS = 36, N = COLS*ROWS, TIME = 75;
+const UNITS = {
+  sentry:  { gap:.16, life:14, speed:22 },
+  sweeper: { gap:.1,  life:12, speed:20 },
+  pike:    { gap:1.6, life:14 },
+  mortar:  { gap:1.3, life:14 },
+  spinner: { gap:.07, life:10, speed:18 }
+};
+/* aim: 'own' = must land on your tiles, 'any' = anywhere on the board, 'none' = plays the moment you tap the card */
+const CARDS = {
+  sentry:   { name:'Sentry',    cost:3, unlock:1, kind:'Build',  aim:'own',  r:1, desc:'Turret that fires straight ahead' },
+  sweeper:  { name:'Sweeper',   cost:4, unlock:1, kind:'Build',  aim:'own',  r:1, desc:'Turret that sweeps side to side' },
+  trench:   { name:'Trench',    cost:3, unlock:1, kind:'Strike', aim:'any',  desc:'Cut a strip 3 wide, 8 deep' },
+  splash:   { name:'Splash',    cost:4, unlock:1, kind:'Strike', aim:'any',  r:3, desc:'Flip a round patch where you tap' },
+  barrage:  { name:'Barrage',   cost:3, unlock:1, kind:'Strike', aim:'none', desc:'One shot up every column' },
+  plating:  { name:'Plating',   cost:3, unlock:1, kind:'Guard',  aim:'any',  r:4, desc:'Armour your tiles around the tap' },
+  stasis:   { name:'Stasis',    cost:2, unlock:1, kind:'Guard',  aim:'none', desc:'Wipe out rival shots in the air' },
+  overdrive:{ name:'Overdrive', cost:3, unlock:1, kind:'Boost',  aim:'none', desc:'Turrets fire twice as fast, 5s' },
+  pike:     { name:'Pike',      cost:4, unlock:2, kind:'Build',  aim:'own',  r:1, desc:'Turret that fires a piercing beam' },
+  capacitor:{ name:'Capacitor', cost:1, unlock:2, kind:'Boost',  aim:'none', desc:'Double energy flow for 8s' },
+  shield:   { name:'Shield',    cost:3, unlock:3, kind:'Guard',  aim:'none', desc:'Your tiles shrug off hits for 3s' },
+  crossfire:{ name:'Crossfire', cost:5, unlock:3, kind:'Strike', aim:'any',  desc:'Flip a band across the whole width' },
+  sabotage: { name:'Sabotage',  cost:3, unlock:3, kind:'Trick',  aim:'any',  r:6, desc:'Wreck the nearest rival turret' },
+  minefield:{ name:'Minefield', cost:3, unlock:4, kind:'Guard',  aim:'any',  r:5, desc:'Mine your tiles; they blast back' },
+  tide:     { name:'Tide',      cost:6, unlock:4, kind:'Strike', aim:'none', desc:'Push your whole front 2 tiles' },
+  mortar:   { name:'Mortar',    cost:5, unlock:5, kind:'Build',  aim:'own',  r:1, desc:'Turret that lobs shells far ahead' },
+  heavy:    { name:'Heavy rounds', cost:4, unlock:5, kind:'Boost', aim:'none', desc:'Shots go one tile deeper, 6s' },
+  jam:      { name:'Jam',       cost:4, unlock:6, kind:'Trick',  aim:'none', desc:'Rival turrets stall for 4s' },
+  broadhead:{ name:'Broadhead', cost:3, unlock:6, kind:'Boost',  aim:'none', desc:'Shots also flip side tiles, 8s' },
+  spinner:  { name:'Spinner',   cost:5, unlock:7, kind:'Build',  aim:'own',  r:1, desc:'Turret that sprays all round' },
+  turncoat: { name:'Turncoat',  cost:5, unlock:7, kind:'Trick',  aim:'none', desc:'Rival shots in the air turn round' },
+  wildfire: { name:'Wildfire',  cost:4, unlock:8, kind:'Strike', aim:'none', desc:'Flip 20 tiles along the front' },
+  lockdown: { name:'Lockdown',  cost:4, unlock:8, kind:'Trick',  aim:'none', desc:'Rival cannot play cards for 6s' },
+  meteor:   { name:'Meteor',    cost:7, unlock:9, kind:'Strike', aim:'none', desc:'Six blasts on rival ground' },
+  refit:    { name:'Refit',     cost:2, unlock:9, kind:'Boost',  aim:'none', desc:'Your turrets are good as new' },
+  reclaim:  { name:'Reclaim',   cost:5, unlock:10, kind:'Guard', aim:'none', desc:'Take back the last 30 tiles lost' },
+  hijack:   { name:'Hijack',    cost:6, unlock:10, kind:'Trick', aim:'any',  r:6, desc:'Nearest rival turret joins you' }
 };
 const UPG = {
-  rapid:  { name:'Rapid loader', max:8, desc:'+7% fire rate per rank' },
+  rapid:  { name:'Rapid loader', max:8, desc:'+7% turret fire rate per rank' },
   dynamo: { name:'Dynamo',       max:6, desc:'+10% energy flow per rank' },
-  van:    { name:'Vanguard',     max:3, desc:'Start one row further up per rank' }
+  van:    { name:'Vanguard',     max:3, desc:'Start two rows further up per rank' }
 };
-const CARDS = {
-  overdrive:{ name:'Overdrive', cost:3, unlock:1, kind:'Boost',  desc:'Double fire rate for 5s' },
-  drill:    { name:'Drill',     cost:3, unlock:1, kind:'Strike', desc:'Flip 5 tiles deep in the lane you tap' },
-  sentry:   { name:'Sentry',    cost:4, unlock:1, kind:'Build',  desc:'Quick-firing turret in the lane you tap' },
-  forkpost: { name:'Fork post', cost:4, unlock:2, kind:'Build',  desc:'Turret that fires a three-way fan' },
-  mortarpost:{ name:'Mortar post', cost:5, unlock:6, kind:'Build', desc:'Turret that shells 3 by 3 patches' },
-  plating:  { name:'Plating',   cost:3, unlock:1, kind:'Guard',  desc:'Armour your front two rows' },
-  splash:   { name:'Splash',    cost:4, unlock:1, kind:'Strike', desc:'Flip a 5 by 3 patch at that lane\'s front' },
-  jam:      { name:'Jam',       cost:4, unlock:1, kind:'Trick',  desc:'Stall every rival gun for 4s' },
-  barrage:  { name:'Barrage',   cost:3, unlock:1, kind:'Strike', desc:'One shot up every lane at once' },
-  stasis:   { name:'Stasis',    cost:2, unlock:1, kind:'Guard',  desc:'Wipe out rival shots in the air' },
-  tide:     { name:'Tide',      cost:6, unlock:2, kind:'Strike', desc:'Push every lane forward 2 tiles' },
-  capacitor:{ name:'Capacitor', cost:1, unlock:2, kind:'Boost',  desc:'Double energy flow for 8s' },
-  shield:   { name:'Shield',    cost:3, unlock:3, kind:'Guard',  desc:'Your tiles shrug off shots for 3s' },
-  crossfire:{ name:'Crossfire', cost:4, unlock:3, kind:'Strike', desc:'Hit the whole row at that lane\'s front' },
-  split:    { name:'Split',     cost:4, unlock:4, kind:'Boost',  desc:'Every turret fires three lanes for 6s' },
-  minefield:{ name:'Minefield', cost:3, unlock:4, kind:'Guard',  desc:'Mine 5 front tiles; they blast back' },
-  heavy:    { name:'Heavy rounds', cost:4, unlock:5, kind:'Boost', desc:'Shots go one tile deeper for 6s' },
-  sprinkler:{ name:'Sprinkler', cost:5, unlock:6, kind:'Build',  desc:'Turret whose shots bounce off walls' },
-  broadhead:{ name:'Broadhead', cost:3, unlock:6, kind:'Boost',  desc:'Shots also hit both side tiles, 8s' },
-  turncoat: { name:'Turncoat',  cost:5, unlock:7, kind:'Trick',  desc:'Every rival shot in the air turns' },
-  pikepost: { name:'Pike post', cost:5, unlock:7, kind:'Build',  desc:'Turret whose bolts drill 4 deep' },
-  wildfire: { name:'Wildfire',  cost:5, unlock:8, kind:'Strike', desc:'Flip 8 rival tiles along the front' },
-  lockdown: { name:'Lockdown',  cost:4, unlock:8, kind:'Trick',  desc:'Rival cannot play cards for 6s' },
-  meteor:   { name:'Meteor',    cost:7, unlock:9, kind:'Strike', desc:'Six blasts land on rival ground' },
-  reclaim:  { name:'Reclaim',   cost:5, unlock:10, kind:'Guard', desc:'Take back the last 8 tiles you lost' }
-};
-const DECK = 8, HAND = 4, MAXE = 10, MAXRANK = 3;
-const POSTS = { sentry:['tapper', 10, .2], forkpost:['fork', 9, .5], pikepost:['lance', 7, .55], mortarpost:['mortar', 9, 1], sprinkler:['ricochet', 8, .17] };
-const rcost = r => 50*(r + 1)*(r + 1);
+const DECK = 8, HAND = 4, MAXE = 10, MAXRANK = 3, MAXUNITS = 7;
 const cost = (k, r) => Math.round(40*(r + 1)*Math.pow(1.45, r));
+const rcost = r => 50*(r + 1)*(r + 1);
 
 const store = {
   get(d){ try { const v = localStorage.getItem('flipfire'); return v ? { ...d, ...JSON.parse(v) } : d; } catch { return d; } },
   set(v){ try { localStorage.setItem('flipfire', JSON.stringify(v)); } catch {} }
 };
-const P = store.get({ level:1, coins:0, up:{ rapid:0, dynamo:0, van:0 }, cannon:'tapper', sound:true, deck:['overdrive','drill','sentry','plating','splash','jam','barrage','stasis'] });
-P.deck = (P.deck || []).filter(k => CARDS[k]).slice(0, DECK);
+const P = store.get({ level:1, coins:0, up:{ rapid:0, dynamo:0, van:0 }, sound:true, deck:[], rank:{} });
 P.rank = P.rank || {};
+P.deck = (P.deck || []).filter(k => CARDS[k] && CARDS[k].unlock <= P.level).slice(0, DECK);
+for (const k of Object.keys(CARDS)) if (P.deck.length < DECK && CARDS[k].unlock <= P.level && !P.deck.includes(k)) P.deck.push(k);
 let tab = 'battle';
-if (!CANNONS[P.cannon]) P.cannon = 'tapper';
 
 /* ---------- sound ---------- */
 let actx = null, lastTick = 0;
@@ -234,260 +236,240 @@ function tone(f, d = .08, type = 'triangle', v = .05, when = 0){
     o.connect(g).connect(actx.destination); o.start(t); o.stop(t + d + .02);
   } catch {}
 }
-function tick(side){ const n = performance.now(); if (n - lastTick < 70) return; lastTick = n; tone(side ? 190 : 520 + Math.random()*120, .04, 'square', .018); }
+function tick(side){ const n = performance.now(); if (n - lastTick < 70) return; lastTick = n; tone(side ? 190 : 520 + Math.random()*120, .04, 'square', .016); }
 
 /* ---------- match ---------- */
 let M = null, paused = false;
-const rivalCannon = n => ['tapper','tapper','fork','tapper','lance','fork','mortar','ricochet','lance','mortar'][(n - 1) % 10];
+const fwd = side => side ? 1 : -1, base = side => side ? 0 : ROWS - 1;
+const inb = (c, r) => c >= 0 && r >= 0 && c < COLS && r < ROWS;
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 function newMatch(idle){
-  const n = P.level, rowsMine = ROWS/2 + P.up.van;
-  const owner = new Uint8Array(COLS*ROWS), hp = new Uint8Array(COLS*ROWS), mine = new Uint8Array(COLS*ROWS), flash = new Float32Array(COLS*ROWS);
+  const n = P.level, rowsMine = ROWS/2 + 2*P.up.van, boss = n % 5 === 0;
+  const owner = new Uint8Array(N), hp = new Uint8Array(N), mine = new Uint8Array(N), flash = new Float32Array(N);
   for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) owner[r*COLS + c] = r >= ROWS - rowsMine ? 0 : 1;
-  // walls: fixed blocks that stop shots, mirrored so both sides face the same layout
-  const W = (c, r) => { owner[r*COLS + c] = 2; owner[(ROWS - 1 - r)*COLS + (COLS - 1 - c)] = 2; };
+  // walls stop shots; each block is mirrored so both sides face the same layout
+  const W = (c0, r0, w, h) => { for (let r = r0; r < r0 + h; r++) for (let c = c0; c < c0 + w; c++){ owner[r*COLS + c] = 2; owner[(ROWS - 1 - r)*COLS + (COLS - 1 - c)] = 2; } };
   const pat = n < 4 ? 0 : n % 4;
-  if (pat === 1){ W(2, 7); W(8, 7); }
-  else if (pat === 2){ for (const c of [0, 1, 5, 9, 10]) W(c, 8); }
-  else if (pat === 3){ W(5, 6); W(4, 8); W(6, 8); }
-  if (n >= 3){
-    let plates = Math.min(32, (n - 2)*4);
-    while (plates-- > 0){ const i = Math.floor(Math.random()*COLS*(ROWS - rowsMine)); if (owner[i] === 1) hp[i] = 1; }
-  }
-  const g = true, boss = n % 5 === 0;
-  const posts = Object.keys(POSTS).filter(k => CARDS[k].unlock <= n);
-  let queue = P.deck.slice();
-  if (g) queue = queue.filter(k => k !== 'decoy').concat(posts.filter(k => !P.deck.includes(k)));
+  if (pat === 1){ W(4, 13, 3, 2); W(15, 13, 3, 2); }
+  else if (pat === 2){ W(0, 17, 4, 1); W(9, 17, 4, 1); W(18, 17, 4, 1); }
+  else if (pat === 3){ W(10, 11, 2, 2); W(6, 15, 2, 2); W(14, 15, 2, 2); }
+  if (n >= 3){ let plates = Math.min(130, (n - 2)*14); while (plates-- > 0){ const i = Math.floor(Math.random()*COLS*(ROWS - rowsMine)); if (owner[i] === 1) hp[i] = 1; } }
+  const builds = Object.keys(UNITS).filter(k => CARDS[k].unlock <= n);
+  const queue = P.deck.slice();
+  while (queue.filter(k => UNITS[k]).length < 3) queue.push('sentry');
   queue.sort(() => Math.random() - .5);
-  while (queue.filter(k => POSTS[k]).length < 4) queue.splice(Math.floor(Math.random()*(queue.length + 1)), 0, 'sentry');
-  { const at = queue.findIndex(k => POSTS[k]); if (at > 0) queue.unshift(queue.splice(at, 1)[0]); }
-  const foe = ['overdrive','sentry'].concat(n >= 4 ? ['barrage'] : [], n >= 5 ? ['splash','plating'] : [], n >= 6 ? ['crossfire','minefield'] : [], n >= 7 ? ['tide','jam'] : [], n >= 8 ? ['wildfire','stasis'] : [], n >= 10 ? ['meteor','split','heavy'] : [], g ? posts.concat(posts) : []);
-  M = { g, boss, sel:-1, lane:5, owner, hp, mine, flash, lost:[[], []], note:null, bullets:[], aux:[], t:TIME, idle:!!idle, over:false, aimT:0, target:COLS/2, queue, foe, foeNext:g ? 'sentry' : foe[0], handKey:'',
+  { const at = queue.findIndex(k => UNITS[k]); if (at > 0) queue.unshift(queue.splice(at, 1)[0]); }
+  const foe = builds.concat(builds, n >= 2 ? ['trench','splash'] : [], n >= 3 ? ['barrage','overdrive'] : [], n >= 4 ? ['crossfire'] : [], n >= 5 ? ['plating'] : [],
+    n >= 6 ? ['tide','sabotage'] : [], n >= 8 ? ['wildfire','minefield'] : [], n >= 10 ? ['meteor','jam'] : []);
+  M = { boss, idle:!!idle, over:false, t:TIME, sel:-1, cur:{ x:COLS/2, y:ROWS - 8 }, owner, hp, mine, flash, lost:[[], []], note:null,
+    bullets:[], units:[], beams:[], shells:[], puffs:[], queue, foe, foeNext:'sentry', handKey:'',
     sides:[
-      { main:!g, x:COLS/2, cd:.4, type:P.cannon, rate:1 + .07*P.up.rapid, flow:(g ? .75 : .5)*(1 + .1*P.up.dynamo), energy:g ? 5 : 2, over:0, frozen:0, split:0, shield:0, decoy:0, cap:0, heavy:0, wide:0, lock:0, alt:1 },
-      { main:!g, x:COLS/2, cd:.6, type:rivalCannon(n), rate:Math.min(1.4, .7 + .05*n)*(boss ? 1.15 : 1), flow:Math.min(.9, .3 + .04*n), energy:2, over:0, frozen:0, split:0, shield:0, decoy:0, cap:0, heavy:0, wide:0, lock:0, alt:1 }
+      { rate:1 + .07*P.up.rapid, flow:.8*(1 + .1*P.up.dynamo), energy:5, over:0, frozen:0, shield:0, cap:0, heavy:0, wide:0, lock:0 },
+      { rate:Math.min(1.3, .65 + .05*n), flow:Math.min(.95, .26 + .045*n), energy:2, over:0, frozen:0, shield:0, cap:0, heavy:0, wide:0, lock:0 }
     ] };
-  for (const side of [0, 1]) for (const x of idle ? [2.5, 5.5, 8.5] : [5.5]) M.aux.push({ x, side, type:'tapper', cd:.3 + .2*side, life:idle ? 999 : 16, gap:.2, alt:1 });
-  if (boss && !idle) for (const x of [2.5, 8.5]) M.aux.push({ x, side:1, type:'tapper', cd:.3, life:999, gap:.3, alt:1 });
+  const put = (side, type, c, back, life) => addUnit(side, type, c + .5, base(side) + fwd(side)*back + .5, 1, life);
+  if (idle){ for (const side of [0, 1]){ put(side, 'sweeper', 5, 5, 999); put(side, 'sentry', 11, 3, 999); put(side, 'sweeper', 16, 5, 999); } }
+  else { put(0, 'sentry', 11, 4, 18); put(1, 'sentry', 10, 4, 18); if (boss){ put(1, 'sweeper', 5, 6, 40); put(1, 'sweeper', 16, 6, 40); } }
 }
-function shoot(side, x, type, T){
-  if (x < 0 || x > COLS) return;
-  const C = CANNONS[type], dir = side ? 1 : -1, y = side ? .01 : ROWS - .01;
-  const b = vx => M.bullets.push({ x:Math.min(COLS - .05, Math.max(.05, x)), y, vx, vy:dir*C.speed, side, pierce:(type === 'lance' ? 3 : 0) + (M.sides[side].heavy > 0 ? 1 : 0), kind:type });
-  if (type === 'fork'){ b(-4); b(0); b(4); }
-  else if (type === 'ricochet'){ b(T.alt*7); T.alt = -T.alt; }
-  else b(0);
+function addUnit(side, type, x, y, pw, life){
+  const mineU = M.units.filter(u => u.side === side && u.max < 900);
+  if (mineU.length >= MAXUNITS) kill(mineU[0], true);
+  const max = life || UNITS[type].life*pw;
+  M.units.push({ side, type, x, y, life:max, max, cd:.3, t:Math.random()*3, ang:0 });
 }
-function fire(side){
-  const S = M.sides[side];
-  shoot(side, S.x, S.type, S);
-  if (S.split > 0){ shoot(side, S.x - 1.5, S.type, S); shoot(side, S.x + 1.5, S.type, S); }
-  S.cd = CANNONS[S.type].gap/(S.rate*(S.over > 0 ? 2 : 1));
+function kill(u, quiet){
+  const at = M.units.indexOf(u); if (at < 0) return;
+  M.units.splice(at, 1); M.puffs.push({ x:u.x, y:u.y, t:.4, side:u.side });
+  if (!quiet) tone(120, .2, 'sawtooth', .05);
 }
 function flip(i, side){
   if (M.owner[i] === 2) return;
   if (M.owner[i] === 1 - side) M.lost[1 - side].push(i);
   M.owner[i] = side; M.hp[i] = 0; M.mine[i] = 0; M.flash[i] = 1;
-  const S = M.sides[side]; S.energy = Math.min(MAXE, S.energy + .025);
+  const S = M.sides[side]; S.energy = Math.min(MAXE, S.energy + .01);
+  for (let k = M.units.length - 1; k >= 0; k--){ const u = M.units[k]; if (u.side !== side && Math.floor(u.y)*COLS + Math.floor(u.x) === i) kill(u); }
   tick(side);
 }
-function strike(i, side){ if (M.owner[i] !== 1 - side) return; if (M.hp[i] > 0){ M.hp[i]--; M.flash[i] = .6; } else flip(i, side); }
-/* Returns true when the bullet is spent. */
-function hit(b, c, r){
-  const i = r*COLS + c;
-  if (M.owner[i] === b.side) return false;
-  if (M.owner[i] === 2) return true;
-  if (M.mine[i]){ M.mine[i] = 0; M.flash[i] = 1; blast(M.owner[i], c, r); tone(130, .18, 'sine', .05); return true; }
-  if (M.sides[M.owner[i]].shield > 0){ M.flash[i] = .35; return true; }
-  if (M.hp[i] > 0){ M.hp[i]--; M.flash[i] = .6; return true; }
-  flip(i, b.side);
-  if (M.sides[b.side].wide > 0){ if (c > 0) strike(i - 1, b.side); if (c < COLS - 1) strike(i + 1, b.side); }
-  if (b.kind === 'mortar'){
-    for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++){
-      const cc = c + dc, rr = r + dr;
-      if ((dc || dr) && cc >= 0 && rr >= 0 && cc < COLS && rr < ROWS) strike(rr*COLS + cc, b.side);
-    }
-    tone(110, .16, 'sine', .05);
-  }
-  return --b.pierce < 0;
+/* One hit on tile i by `side`. Returns true when the tile changed hands. */
+function strike(i, side){
+  const o = M.owner[i];
+  if (o !== 1 - side) return false;
+  if (M.sides[o].shield > 0){ M.flash[i] = .3; return false; }
+  if (M.mine[i]){ M.mine[i] = 0; M.flash[i] = 1; blast(o, i % COLS, Math.floor(i/COLS), 2); tone(130, .18, 'sine', .05); return false; }
+  if (M.hp[i] > 0){ M.hp[i]--; M.flash[i] = .6; return false; }
+  flip(i, side); return true;
 }
-function tide(side, depth = 2){
-  for (let c = 0; c < COLS; c++){
-    let left = depth;
-    for (let k = 0; k < ROWS && left; k++){
-      const r = side ? k : ROWS - 1 - k, i = r*COLS + c;
-      if (M.owner[i] === 1 - side){ flip(i, side); left--; }
-    }
-  }
-  tone(180, .3, 'sawtooth', .04); tone(360, .35, 'triangle', .05, .08);
+function blast(side, c, r, rad){
+  for (let dr = -rad; dr <= rad; dr++) for (let dc = -rad; dc <= rad; dc++)
+    if (dc*dc + dr*dr <= rad*rad + 1 && inb(c + dc, r + dr)) strike((r + dr)*COLS + c + dc, side);
 }
-const fwd = side => side ? 1 : -1, base = side => side ? 0 : ROWS - 1;
-const lane = S => Math.min(COLS - 1, Math.max(0, Math.floor(S.x)));
-function frontRow(side, c){ for (let k = 0; k < ROWS; k++){ const r = base(side) + fwd(side)*k; if (M.owner[r*COLS + c] !== side) return r; } return -1; }
-function blast(side, c, r){
-  for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++){
-    const cc = c + dc, q = r + dr;
-    if (cc >= 0 && q >= 0 && cc < COLS && q < ROWS) strike(q*COLS + cc, side);
-  }
+function frontRow(side, c){ for (let k = 0; k < ROWS; k++){ const r = base(side) + fwd(side)*k; if (M.owner[r*COLS + c] === 1 - side) return r; } return -1; }
+function bullet(side, x, y, ang, speed, pierce = 0){
+  M.bullets.push({ side, x, y, vx:Math.sin(ang)*speed, vy:fwd(side)*Math.cos(ang)*speed, pierce:pierce + (M.sides[side].heavy > 0 ? 1 : 0) });
 }
-function post(side, x, id, pw){
-  const [type, life, gap] = POSTS[id];
-  if (M.g){ x = Math.floor(x) + .5; M.aux = M.aux.filter(a => !(a.side === side && Math.floor(a.x) === Math.floor(x))); }
-  M.aux.push({ x, side, type, cd:.2, life:life*pw*(M.g ? 2.2 : 1), gap, alt:1 });
+function fireUnit(u){
+  const U = UNITS[u.type], f = fwd(u.side), S = M.sides[u.side];
+  if (u.type === 'pike'){
+    const c = Math.floor(u.x); let r = Math.floor(u.y) + f, left = 10 + (S.heavy > 0 ? 4 : 0), end = r;
+    for (; r >= 0 && r < ROWS && left > 0; r += f){
+      const i = r*COLS + c, o = M.owner[i]; end = r;
+      if (o === 2) break;
+      if (o === u.side) continue;
+      if (!strike(i, u.side)) break;
+      if (S.wide > 0){ if (c > 0) strike(i - 1, u.side); if (c < COLS - 1) strike(i + 1, u.side); }
+      left--;
+    }
+    M.beams.push({ x:u.x, y0:u.y, y1:end + .5, side:u.side, t:.28 }); tone(u.side ? 300 : 880, .12, 'sawtooth', .03);
+  } else if (u.type === 'mortar'){
+    M.shells.push({ side:u.side, x0:u.x, y0:u.y, x1:clamp(u.x + (Math.random()*6 - 3), .5, COLS - .5), y1:clamp(u.y + f*(9 + Math.random()*7), .5, ROWS - .5), t:0, dur:.75 });
+  } else bullet(u.side, u.x, u.y, u.ang, U.speed);
 }
-function cast(side, id){
-  const S = M.sides[side], O = M.sides[1 - side], c = lane(S), f = fwd(side);
-  const pw = side === 0 ? 1 + .25*(P.rank[id] || 0) : 1, rk = Math.round((pw - 1)*4);
-  if (id === 'overdrive') S.over = 5*pw;
-  else if (id === 'jam') O.frozen = 4*pw;
-  else if (id === 'tide') tide(side, rk >= 2 ? 3 : 2);
-  else if (id === 'shield') S.shield = 3*pw;
-  else if (id === 'split') S.split = 6*pw;
-  else if (id === 'decoy'){ O.decoy = 5*pw; M.target = Math.random() < .5 ? .5 : COLS - .5; }
-  else if (POSTS[id]) post(side, S.x, id, pw);
-  else if (id === 'drill'){
-    let left = Math.round(5*pw);
-    for (let k = 0; k < ROWS && left; k++){ const i = (base(side) + f*k)*COLS + c; if (M.owner[i] === 1 - side){ flip(i, side); left--; } }
+
+/* ---------- cards ---------- */
+function nearestUnit(side, x, y, rad){
+  let best = null, bd = rad*rad;
+  for (const u of M.units){ if (u.side !== side) continue; const d = (u.x - x)**2 + (u.y - y)**2; if (d <= bd){ bd = d; best = u; } }
+  return best;
+}
+/* Returns '' when the card can be played at (x, y), else a short reason. */
+function valid(side, id, x, y){
+  const C = CARDS[id], i = Math.floor(y)*COLS + Math.floor(x);
+  if (C.aim === 'own'){
+    if (M.owner[i] !== side) return 'Build on your own tiles';
+    if (M.units.some(u => u.side === side && (u.x - x)**2 + (u.y - y)**2 < 2.6)) return 'Too close to a turret';
   }
-  else if (id === 'splash'){
-    const r0 = frontRow(side, c);
-    if (r0 >= 0) for (let k = 0; k < Math.round(3*pw); k++) for (let dc = -2; dc <= 2; dc++){
-      const cc = c + dc, r = r0 + f*k;
-      if (cc >= 0 && cc < COLS && r >= 0 && r < ROWS) strike(r*COLS + cc, side);
-    }
+  if ((id === 'sabotage' || id === 'hijack') && !nearestUnit(1 - side, x, y, C.r)) return 'No rival turret there';
+  return '';
+}
+function cast(side, id, x, y){
+  const S = M.sides[side], O = M.sides[1 - side], c = Math.floor(x), r = Math.floor(y), f = fwd(side);
+  const pw = side === 0 ? 1 + .25*(P.rank[id] || 0) : 1, rk = Math.round((pw - 1)*4), R = v => Math.round(v*pw);
+  if (UNITS[id]) addUnit(side, id, c + .5, r + .5, pw);
+  else if (id === 'trench'){ for (let k = 0; k < R(8); k++) for (let dc = -1; dc <= 1; dc++) if (inb(c + dc, r + f*k)) strike((r + f*k)*COLS + c + dc, side); }
+  else if (id === 'splash') blast(side, c, r, 3 + (rk >= 2 ? 1 : 0));
+  else if (id === 'crossfire'){ for (let k = 0; k < 2 + (rk >= 2 ? 1 : 0); k++) if (inb(0, r + f*k)) for (let cc = 0; cc < COLS; cc++) strike((r + f*k)*COLS + cc, side); }
+  else if (id === 'barrage'){ for (let cc = 0; cc < COLS; cc++) bullet(side, cc + .5, base(side) + .5, 0, 24, rk); }
+  else if (id === 'tide'){
+    for (let cc = 0; cc < COLS; cc++){ let left = rk >= 2 ? 3 : 2; for (let k = 0; k < ROWS && left; k++){ const i = (base(side) + f*k)*COLS + cc; if (M.owner[i] === 1 - side){ strike(i, side); left--; } } }
+    tone(180, .3, 'sawtooth', .04);
   }
-  else if (id === 'plating'){
-    for (let cc = 0; cc < COLS; cc++){
-      let left = Math.round(2*pw);
-      for (let k = 0; k < ROWS && left; k++){ const i = (base(1 - side) + fwd(1 - side)*k)*COLS + cc; if (M.owner[i] === side){ M.hp[i] = 1; M.flash[i] = .5; left--; } }
-    }
-  }
-  else if (id === 'turncoat'){ for (const b of M.bullets) if (b.side !== side){ b.side = side; b.vy = -b.vy; b.pierce += rk; } }
-  else if (id === 'meteor'){
-    const foes = []; M.owner.forEach((o, i) => { if (o === 1 - side) foes.push(i); });
-    for (let k = 0; k < Math.round(6*pw) && foes.length; k++){ const i = foes[Math.floor(Math.random()*foes.length)]; blast(side, i % COLS, Math.floor(i/COLS)); }
-    tone(90, .3, 'sine', .07);
-  }
-  if (id === 'barrage'){ const n0 = M.bullets.length; for (let cc = 0; cc < COLS; cc++) shoot(side, cc + .5, 'tapper', S); for (let q = n0; q < M.bullets.length; q++) M.bullets[q].pierce += rk; }
-  else if (id === 'crossfire'){ const r0 = frontRow(side, c); if (r0 >= 0) for (let k = 0; k < (rk >= 2 ? 2 : 1); k++){ const r = r0 + f*k; if (r >= 0 && r < ROWS) for (let cc = 0; cc < COLS; cc++) strike(r*COLS + cc, side); } }
-  else if (id === 'minefield'){
-    const cols = [...Array(COLS).keys()].sort(() => Math.random() - .5).slice(0, Math.round(5*pw));
-    for (const cc of cols) for (let k = 0; k < ROWS; k++){ const i = (base(1 - side) + fwd(1 - side)*k)*COLS + cc; if (M.owner[i] === side){ M.mine[i] = 1; M.flash[i] = .5; break; } }
-  }
-  else if (id === 'stasis'){ M.bullets = M.bullets.filter(b => b.side === side); if (rk) S.shield = Math.max(S.shield, rk*.5); }
-  else if (id === 'capacitor') S.cap = 8*pw;
-  else if (id === 'heavy') S.heavy = 6*pw;
-  else if (id === 'broadhead') S.wide = 8*pw;
-  else if (id === 'lockdown') O.lock = 6*pw;
   else if (id === 'wildfire'){
     const edge = [];
-    for (let i = 0; i < M.owner.length; i++){
+    for (let i = 0; i < N; i++){
       if (M.owner[i] !== 1 - side) continue;
       const cc = i % COLS;
       if (M.owner[i - COLS] === side || M.owner[i + COLS] === side || (cc > 0 && M.owner[i - 1] === side) || (cc < COLS - 1 && M.owner[i + 1] === side)) edge.push(i);
     }
-    edge.sort(() => Math.random() - .5).slice(0, Math.round(8*pw)).forEach(i => flip(i, side));
+    edge.sort(() => Math.random() - .5).slice(0, R(20)).forEach(i => strike(i, side));
   }
-  else if (id === 'reclaim'){
-    const L = M.lost[side]; let left = Math.round(8*pw);
-    while (L.length && left){ const i = L.pop(); if (M.owner[i] === 1 - side){ flip(i, side); left--; } }
+  else if (id === 'meteor'){
+    const foes = []; for (let i = 0; i < N; i++) if (M.owner[i] === 1 - side) foes.push(i);
+    for (let k = 0; k < R(6) && foes.length; k++){ const i = foes[Math.floor(Math.random()*foes.length)]; blast(side, i % COLS, Math.floor(i/COLS), 2); }
+    tone(90, .3, 'sine', .07);
   }
-  M.note = { text:CARDS[id].name, side, t:1.5 };
-  tone(side ? 240 : 660, .18, 'triangle', .05); tone(side ? 180 : 990, .2, 'sine', .04, .07);
+  else if (id === 'reclaim'){ const L = M.lost[side]; let left = R(30); while (L.length && left){ const i = L.pop(); if (M.owner[i] === 1 - side){ flip(i, side); left--; } } }
+  else if (id === 'plating'){ const rad = 4 + (rk >= 2 ? 1 : 0); for (let dr = -rad; dr <= rad; dr++) for (let dc = -rad; dc <= rad; dc++){ const i = (r + dr)*COLS + c + dc; if (dc*dc + dr*dr <= rad*rad && inb(c + dc, r + dr) && M.owner[i] === side){ M.hp[i] = 1; M.flash[i] = .5; } } }
+  else if (id === 'minefield'){
+    const spots = []; for (let dr = -5; dr <= 5; dr++) for (let dc = -5; dc <= 5; dc++){ const i = (r + dr)*COLS + c + dc; if (dc*dc + dr*dr <= 25 && inb(c + dc, r + dr) && M.owner[i] === side && !M.mine[i]) spots.push(i); }
+    spots.sort(() => Math.random() - .5).slice(0, R(6)).forEach(i => { M.mine[i] = 1; M.flash[i] = .5; });
+  }
+  else if (id === 'shield') S.shield = 3*pw;
+  else if (id === 'stasis'){ M.bullets = M.bullets.filter(b => b.side === side); M.shells = M.shells.filter(q => q.side === side); if (rk) S.shield = Math.max(S.shield, rk*.5); }
+  else if (id === 'overdrive') S.over = 5*pw;
+  else if (id === 'capacitor') S.cap = 8*pw;
+  else if (id === 'heavy') S.heavy = 6*pw;
+  else if (id === 'broadhead') S.wide = 8*pw;
+  else if (id === 'refit'){ for (const u of M.units) if (u.side === side && u.max < 900){ u.max = Math.max(u.max, UNITS[u.type].life*pw); u.life = u.max; } }
+  else if (id === 'jam') O.frozen = 4*pw;
+  else if (id === 'lockdown') O.lock = 6*pw;
+  else if (id === 'turncoat'){ for (const b of M.bullets) if (b.side !== side){ b.side = side; b.vy = -b.vy; b.pierce += rk; } }
+  else if (id === 'sabotage'){ const u = nearestUnit(1 - side, x, y, CARDS[id].r); if (u){ kill(u); if (rk >= 2) blast(side, Math.floor(u.x), Math.floor(u.y), 2); } }
+  else if (id === 'hijack'){
+    const u = nearestUnit(1 - side, x, y, CARDS[id].r);
+    if (u){ u.side = side; u.max = UNITS[u.type].life*pw; u.life = u.max; const i = Math.floor(u.y)*COLS + Math.floor(u.x); if (M.owner[i] !== 2) flip(i, side); blast(side, Math.floor(u.x), Math.floor(u.y), 2); }
+  }
+  M.note = { text:CARDS[id].name, side, t:1.4 };
+  tone(side ? 240 : 660, .16, 'triangle', .05); tone(side ? 180 : 990, .18, 'sine', .04, .07);
 }
 const live = () => M && !M.idle && !M.over && !paused;
-function spend(k){
+function spend(k, x, y){
   const S = M.sides[0], id = M.queue[k], card = CARDS[id];
-  if (!card) return;
-  if (S.lock > 0){ M.note = { text:'Locked down', side:0, t:1 }; return; }
-  if (S.energy < card.cost){ M.note = { text:`Need ${card.cost} energy`, side:0, t:1 }; tone(150, .1, 'sine', .04); return; }
-  S.energy -= card.cost;
-  M.queue.splice(k, 1); M.queue.push(id);
-  cast(0, id);
+  const say = text => { M.note = { text, side:0, t:1 }; tone(150, .1, 'sine', .04); return false; };
+  if (!card) return false;
+  if (S.lock > 0) return say('Locked down');
+  if (S.energy < card.cost) return say(`Need ${card.cost} energy`);
+  const why = valid(0, id, x, y); if (why) return say(why);
+  S.energy -= card.cost; M.queue.splice(k, 1); M.queue.push(id);
+  cast(0, id, x, y); M.sel = -1; return true;
 }
 function power(k){
   if (!live() || !M.queue[k]) return;
-  if (M.g){ M.sel = M.sel === k ? -1 : k; tone(520, .05); return; }
-  spend(k);
+  if (CARDS[M.queue[k]].aim === 'none'){ spend(k, M.cur.x, M.cur.y); return; }
+  M.sel = M.sel === k ? -1 : k; tone(520, .05);
 }
-function playAt(k, laneIdx){
-  if (!live() || !M.g || k < 0) return;
-  M.sides[0].x = laneIdx + .5;
-  const before = M.queue[k]; spend(k);
-  if (M.queue[k] !== before) M.sel = -1;
-}
-function share(){ let a = 0, b = 0; for (const o of M.owner){ if (o === 0) a++; else if (o === 1) b++; } return a/(a + b); }
+function playAt(k, x, y){ return live() && k >= 0 ? spend(k, x, y) : false; }
+function share(){ let a = 0, b = 0; for (let i = 0; i < N; i++){ if (M.owner[i] === 0) a++; else if (M.owner[i] === 1) b++; } return a/(a + b); }
 
-function rival(dt){
-  const R = M.sides[1], n = P.level;
-  if (R.frozen > 0) return;
-  if (M.g){
-    if (R.lock <= 0 && R.energy >= CARDS[M.foeNext].cost){
-      const isPost = !!POSTS[M.foeNext]; let best = 0, bv = -1e9;
-      for (let c = 0; c < COLS; c++){
-        let k = 0; for (let r = 0; r < ROWS; r++) if (!M.owner[r*COLS + c]) k++;
-        const v = k + Math.random()*3 - (isPost && M.aux.some(a => a.side === 1 && Math.floor(a.x) === c) ? 100 : 0);
-        if (v > bv){ bv = v; best = c; }
-      }
-      R.x = best + .5; R.energy -= CARDS[M.foeNext].cost; cast(1, M.foeNext);
-      M.foeNext = M.foe[Math.floor(Math.random()*M.foe.length)];
+function rival(){
+  const R = M.sides[1], id = M.foeNext, C = CARDS[id];
+  if (R.frozen > 0 || R.lock > 0 || R.energy < C.cost) return;
+  const again = () => { M.foeNext = M.foe[Math.floor(Math.random()*M.foe.length)]; };
+  let best = 0, bv = -1;
+  for (let c = 0; c < COLS; c++){ let k = 0; for (let r = 0; r < ROWS; r++) if (!M.owner[r*COLS + c]) k++; const v = k + Math.random()*10; if (v > bv){ bv = v; best = c; } }
+  let fr = frontRow(1, best); if (fr < 0) fr = ROWS - 1;
+  let x = best + .5, y = fr + .5, ok = true;
+  if (C.aim === 'own'){
+    ok = false;
+    for (let tries = 0; tries < 14 && !ok; tries++){
+      x = clamp(best + Math.round(Math.random()*6 - 3), 0, COLS - 1) + .5; y = clamp(fr - 3 - Math.floor(Math.random()*7), 1, ROWS - 2) + .5;
+      ok = !valid(1, id, x, y);
     }
-    return;
-  }
-  if (R.lock <= 0 && R.energy >= CARDS[M.foeNext].cost){
-    R.energy -= CARDS[M.foeNext].cost; cast(1, M.foeNext);
-    M.foeNext = M.foe[Math.floor(Math.random()*M.foe.length)];
-  }
-  M.aimT -= dt;
-  if (M.aimT <= 0 && R.decoy <= 0){
-    M.aimT = .45;
-    let best = 0, bv = -1; const jit = Math.max(.5, 7 - n);
-    for (let c = 0; c < COLS; c++){
-      let k = 0; for (let r = 0; r < ROWS; r++) if (!M.owner[r*COLS + c]) k++;
-      const v = k + Math.random()*jit; if (v > bv){ bv = v; best = c; }
-    }
-    M.target = best + .5;
-  }
-  const sp = (3 + .5*n)*dt, d = M.target - R.x;
-  R.x += Math.abs(d) < sp ? d : Math.sign(d)*sp;
+  } else if (id === 'sabotage'){ const mine = M.units.filter(u => u.side === 0); if (mine.length){ const u = mine[Math.floor(Math.random()*mine.length)]; x = u.x; y = u.y; } else ok = false; }
+  else if (id === 'plating' || id === 'minefield') y = Math.max(.5, fr - 2.5);
+  else if (id === 'splash') y = Math.min(ROWS - .5, fr + 2.5);
+  if (!ok || valid(1, id, x, y)){ again(); return; }
+  R.energy -= C.cost; cast(1, id, x, y); again();
 }
-let keyDir = 0;
 function step(dt){
-  if (!M.idle){ M.t -= dt; }
-  const A = M.sides[0];
-  if (keyDir && A.main) A.x = Math.min(COLS - .5, Math.max(.5, A.x + keyDir*9*dt));
-  if (M.idle){ A.x = COLS/2 + Math.sin(performance.now()/900)*3; }
-  rival(dt);
-  M.sides.forEach((S, side) => {
-    for (const k of ['over','split','shield','decoy','cap','heavy','wide','lock']) if (S[k] > 0) S[k] -= dt;
+  if (!M.idle){ M.t -= dt; rival(); }
+  M.sides.forEach(S => {
+    for (const k of ['over','frozen','shield','cap','heavy','wide','lock']) if (S[k] > 0) S[k] -= dt;
     if (!M.idle) S.energy = Math.min(MAXE, S.energy + S.flow*dt*(S.cap > 0 ? 2 : 1));
-    if (S.frozen > 0){ S.frozen -= dt; return; }
-    if (S.main){ S.cd -= dt; if (S.cd <= 0) fire(side); }
   });
-  for (let k = M.aux.length - 1; k >= 0; k--){
-    const a = M.aux[k], S = M.sides[a.side]; a.life -= dt; if (S.frozen <= 0) a.cd -= dt;
-    if (a.cd <= 0){
-      shoot(a.side, a.x, a.type, a);
-      if (M.g && S.split > 0){ shoot(a.side, a.x - 1.5, a.type, a); shoot(a.side, a.x + 1.5, a.type, a); }
-      a.cd = a.gap/(S.rate*(S.over > 0 ? 2 : 1));
-    }
-    if (a.life <= 0) M.aux.splice(k, 1);
+  for (let k = M.units.length - 1; k >= 0; k--){
+    const u = M.units[k], S = M.sides[u.side];
+    if (u.max < 900){ u.life -= dt; if (u.life <= 0){ kill(u, true); continue; } }
+    if (S.frozen > 0) continue;
+    u.t += dt;
+    if (u.type === 'sweeper') u.ang = Math.sin(u.t*1.7)*.95; else if (u.type === 'spinner') u.ang = u.t*3.2;
+    u.cd -= dt; if (u.cd <= 0){ fireUnit(u); u.cd = UNITS[u.type].gap/(S.rate*(S.over > 0 ? 2 : 1)); }
   }
   for (let k = M.bullets.length - 1; k >= 0; k--){
     const b = M.bullets[k];
     b.x += b.vx*dt; b.y += b.vy*dt;
     if (b.x < 0){ b.x = -b.x; b.vx = -b.vx; } else if (b.x > COLS){ b.x = 2*COLS - b.x; b.vx = -b.vx; }
-    const r = Math.floor(b.y), c = Math.min(COLS - 1, Math.max(0, Math.floor(b.x)));
-    if (r < 0 || r >= ROWS || hit(b, c, r)) M.bullets.splice(k, 1);
+    const r = Math.floor(b.y), c = clamp(Math.floor(b.x), 0, COLS - 1);
+    if (r < 0 || r >= ROWS){ M.bullets.splice(k, 1); continue; }
+    const i = r*COLS + c, o = M.owner[i];
+    if (o === b.side) continue;
+    let dead = true;
+    if (o !== 2 && strike(i, b.side)){
+      if (M.sides[b.side].wide > 0){ if (c > 0) strike(i - 1, b.side); if (c < COLS - 1) strike(i + 1, b.side); }
+      dead = --b.pierce < 0;
+    }
+    if (dead) M.bullets.splice(k, 1);
   }
+  for (let k = M.shells.length - 1; k >= 0; k--){
+    const q = M.shells[k]; q.t += dt;
+    if (q.t >= q.dur){ blast(q.side, Math.floor(q.x1), Math.floor(q.y1), 2); tone(110, .14, 'sine', .04); M.puffs.push({ x:q.x1, y:q.y1, t:.3, side:q.side }); M.shells.splice(k, 1); }
+  }
+  for (const list of [M.beams, M.puffs]) for (let k = list.length - 1; k >= 0; k--){ list[k].t -= dt; if (list[k].t <= 0) list.splice(k, 1); }
   if (M.note && M.note.t > 0) M.note.t -= dt;
-  for (let i = 0; i < M.flash.length; i++) if (M.flash[i] > 0) M.flash[i] = Math.max(0, M.flash[i] - 4*dt);
-  if (!M.idle){
-    const s = share();
-    if (M.t <= 0 || s >= .88 || s <= .12) finish(s);
-  }
+  for (let i = 0; i < N; i++) if (M.flash[i] > 0) M.flash[i] = Math.max(0, M.flash[i] - 4*dt);
+  if (!M.idle){ const s = share(); if (M.t <= 0 || s >= .88 || s <= .12) finish(s); }
 }
 function finish(s){
-  M.over = true;
+  M.over = true; M.sel = -1;
   const won = s > .5, pct = Math.round(s*100);
   const stars = !won ? 0 : s >= .8 ? 3 : s >= .65 ? 2 : 1;
   const earned = won ? (30 + 6*P.level + Math.round((s - .5)*80) + 10*(stars - 1))*(M.boss ? 2 : 1) : 8 + Math.round(s*20);
@@ -498,82 +480,90 @@ function finish(s){
   if (won){ P.level++; [523,659,784,1047].forEach((f, i) => tone(f, .2, 'triangle', .06, i*.1)); }
   else [392,330,262].forEach((f, i) => tone(f, .24, 'sine', .06, i*.13));
   const card = Object.keys(CARDS).filter(k => CARDS[k].unlock === P.level && won).map(k => CARDS[k].name);
-  if (card.length) $('over-sub').textContent += ` New card: ${card.join(', ')}.`;
+  if (card.length) $('over-sub').textContent += ` New cards: ${card.join(', ')}.`;
   store.set(P); chrome();
   $('dlg-over').hidden = false;
 }
 
 /* ---------- drawing ---------- */
 const cv = $('cv'), ctx = cv.getContext('2d');
-let geo = { t:20, gx:0, gy:0, w:0, h:0, dpr:1 };
+let geo = { t:10, gx:0, gy:0, w:0, h:0, dpr:1 };
 function layout(){
   const r = $('field').getBoundingClientRect(), dpr = Math.min(window.devicePixelRatio || 1, 3);
   if (r.width < 10 || r.height < 10) return;
   cv.width = Math.round(r.width*dpr); cv.height = Math.round(r.height*dpr);
-  const t = Math.min(r.width/COLS, r.height/(ROWS + 2.6));
-  geo = { t, dpr, w:r.width, h:r.height, gx:(r.width - COLS*t)/2, gy:(r.height - (ROWS + 2.6)*t)/2 + 1.3*t };
+  const t = Math.min(r.width/COLS, r.height/ROWS);
+  geo = { t, dpr, w:r.width, h:r.height, gx:(r.width - COLS*t)/2, gy:(r.height - ROWS*t)/2 };
 }
-function rr(x, y, w, h, q){ ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x, y, w, h, q) : ctx.rect(x, y, w, h); }
-function cannon(side, col, fg, ice, G){
-  const S = M.sides[side], T = G || S, { t, gx, gy } = geo, dir = side ? 1 : -1;
-  const x = gx + T.x*t, y = side ? gy - .62*t : gy + ROWS*t + .62*t;
-  ctx.save(); ctx.translate(x, y); ctx.scale(G ? .84 : 1, G ? -dir*.84 : -dir);
-  const c = S.frozen > 0 ? ice : col;
-  ctx.fillStyle = c;
-  const barrel = (ang, w, len) => { ctx.save(); ctx.rotate(ang); rr(-w/2, 0, w, len, w*.3); ctx.fill(); ctx.restore(); };
-  if (T.type === 'fork'){ barrel(-.45, .2*t, .62*t); barrel(0, .2*t, .68*t); barrel(.45, .2*t, .62*t); }
-  else if (T.type === 'lance') barrel(0, .16*t, .86*t);
-  else if (T.type === 'mortar') barrel(0, .5*t, .52*t);
-  else if (T.type === 'ricochet'){ barrel(-.5, .2*t, .66*t); barrel(.5, .2*t, .66*t); }
-  else barrel(0, .26*t, .64*t);
-  ctx.fillStyle = fg; rr(-.48*t, -.34*t, .96*t, .5*t, .2*t); ctx.fill();
-  ctx.fillStyle = c; ctx.beginPath(); ctx.arc(0, -.09*t, .13*t, 0, 7); ctx.fill();
-  if (S.over > 0){ ctx.strokeStyle = c; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, -.05*t, .7*t, 0, 7); ctx.stroke(); }
-  if (S.shield > 0){ ctx.strokeStyle = ice; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, -.05*t, .84*t, 0, 7); ctx.stroke(); }
+function drawUnit(u, col, fg, bg, ice){
+  const { t, gx, gy } = geo, S = M.sides[u.side], x = gx + u.x*t, y = gy + u.y*t, R = t*1.05, c = S.frozen > 0 ? ice : col;
+  ctx.save(); ctx.translate(x, y);
+  ctx.beginPath(); ctx.arc(0, 0, R, 0, 7); ctx.fillStyle = fg; ctx.fill();
+  ctx.lineWidth = Math.max(2, t*.2); ctx.strokeStyle = bg; ctx.stroke();
+  if (u.max < 900){ ctx.beginPath(); ctx.arc(0, 0, R, -Math.PI/2, -Math.PI/2 + 2*Math.PI*u.life/u.max); ctx.strokeStyle = c; ctx.stroke(); }
+  ctx.fillStyle = c; ctx.strokeStyle = c; ctx.lineCap = 'round';
+  const dir = a => [Math.sin(a), fwd(u.side)*Math.cos(a)];
+  const line = (a, len, w) => { const [dx, dy] = dir(a); ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(dx*len, dy*len); ctx.stroke(); };
+  if (u.type === 'sentry') line(0, R*.95, t*.34);
+  else if (u.type === 'sweeper') line(u.ang, R*.95, t*.3);
+  else if (u.type === 'pike'){ line(0, R*1.25, t*.18); }
+  else if (u.type === 'mortar'){ ctx.lineWidth = t*.22; ctx.beginPath(); ctx.arc(0, 0, R*.5, 0, 7); ctx.stroke(); }
+  else for (let k = 0; k < 3; k++) line(u.ang + k*2.094, R*.85, t*.2);
+  ctx.beginPath(); ctx.arc(0, 0, t*.26, 0, 7); ctx.fill();
+  if (S.over > 0){ ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(0, 0, R + t*.4, 0, 7); ctx.stroke(); }
   ctx.restore();
 }
 function draw(){
   const st = getComputedStyle(document.documentElement), v = n => st.getPropertyValue(n).trim();
   const col = [v('--a'), v('--b'), v('--line')], fg = v('--fg'), bg = v('--bg'), ice = v('--ice');
-  const { t, gx, gy, dpr } = geo, g = Math.max(1, t*.05);
+  const { t, gx, gy, dpr } = geo, g = t > 9 ? 1 : .5, s = t - g;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, geo.w, geo.h);
-  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++){
-    const i = r*COLS + c, x = gx + c*t + g/2, y = gy + r*t + g/2, s = t - g;
-    ctx.fillStyle = col[M.owner[i]]; rr(x, y, s, s, t*.16); ctx.fill();
-    if (M.hp[i] > 0){ ctx.strokeStyle = fg; ctx.lineWidth = Math.max(1.5, t*.09); rr(x + t*.16, y + t*.16, s - t*.32, s - t*.32, t*.08); ctx.stroke(); }
-    if (M.mine[i]){ ctx.fillStyle = fg; ctx.beginPath(); ctx.arc(x + s/2, y + s/2, t*.15, 0, 7); ctx.fill(); ctx.fillStyle = col[M.owner[i]]; ctx.beginPath(); ctx.arc(x + s/2, y + s/2, t*.06, 0, 7); ctx.fill(); }
-    if (M.flash[i] > 0){ ctx.globalAlpha = M.flash[i]*.7; ctx.fillStyle = '#fff'; rr(x, y, s, s, t*.16); ctx.fill(); ctx.globalAlpha = 1; }
+  for (let o = 0; o < 3; o++){
+    ctx.fillStyle = col[o]; ctx.beginPath();
+    for (let i = 0; i < N; i++) if (M.owner[i] === o) ctx.rect(gx + (i % COLS)*t + g/2, gy + Math.floor(i/COLS)*t + g/2, s, s);
+    ctx.fill();
   }
-  for (const b of M.bullets){
-    const x = gx + b.x*t, y = gy + b.y*t, rad = (b.kind === 'mortar' ? .26 : .13)*t;
-    ctx.fillStyle = bg; ctx.strokeStyle = fg; ctx.lineWidth = Math.max(1.5, t*.07);
-    ctx.beginPath();
-    if (b.kind === 'lance') ctx.ellipse(x, y, rad*.8, rad*2.6, 0, 0, 7); else ctx.arc(x, y, rad, 0, 7);
-    ctx.fill(); ctx.stroke();
-  }
-  for (const a of M.aux){
-    const x = gx + a.x*t, y = a.side ? gy - .3*t : gy + ROWS*t + .3*t;
-    ctx.globalAlpha = Math.min(1, a.life/1.5);
-    if (M.g){ cannon(a.side, col[a.side], fg, ice, a); ctx.globalAlpha = 1; continue; }
-    ctx.fillStyle = fg; rr(x - .24*t, y - .2*t, .48*t, .4*t, .12*t); ctx.fill();
-    ctx.fillStyle = col[a.side]; ctx.beginPath(); ctx.arc(x, y, .1*t, 0, 7); ctx.fill();
-    ctx.globalAlpha = 1;
-  }
+  ctx.strokeStyle = fg; ctx.lineWidth = Math.max(1, t*.12); ctx.beginPath();
+  for (let i = 0; i < N; i++) if (M.hp[i] > 0) ctx.rect(gx + (i % COLS)*t + t*.24, gy + Math.floor(i/COLS)*t + t*.24, t*.52, t*.52);
+  ctx.stroke();
+  ctx.fillStyle = fg; ctx.beginPath();
+  for (let i = 0; i < N; i++) if (M.mine[i]){ const x = gx + (i % COLS + .5)*t, y = gy + (Math.floor(i/COLS) + .5)*t; ctx.moveTo(x + t*.26, y); ctx.arc(x, y, t*.26, 0, 7); }
+  ctx.fill();
+  ctx.fillStyle = '#fff';
+  for (let i = 0; i < N; i++) if (M.flash[i] > 0){ ctx.globalAlpha = M.flash[i]*.7; ctx.fillRect(gx + (i % COLS)*t + g/2, gy + Math.floor(i/COLS)*t + g/2, s, s); }
+  ctx.globalAlpha = 1;
   for (const side of [0, 1]) if (M.sides[side].shield > 0){
-    ctx.strokeStyle = ice; ctx.lineWidth = 3; ctx.globalAlpha = .9; ctx.beginPath();
-    for (let c = 0; c < COLS; c++){ const r = frontRow(1 - side, c); if (r < 0) continue; const y = gy + (side ? r : r + 1)*t; ctx.moveTo(gx + c*t + 2, y); ctx.lineTo(gx + (c + 1)*t - 2, y); }
-    ctx.stroke(); ctx.globalAlpha = 1;
+    ctx.strokeStyle = ice; ctx.lineWidth = 2.5; ctx.beginPath();
+    for (let c = 0; c < COLS; c++){ const r = frontRow(1 - side, c); if (r < 0) continue; const y = gy + (side ? r : r + 1)*t; ctx.moveTo(gx + c*t, y); ctx.lineTo(gx + (c + 1)*t, y); }
+    ctx.stroke();
   }
-  for (const side of [0, 1]) if (M.sides[side].main) cannon(side, col[side], fg, ice);
-  if (M.g && M.sel >= 0 && !M.over){
-    ctx.fillStyle = fg; ctx.globalAlpha = .16; ctx.fillRect(gx + M.lane*t, gy, t, ROWS*t);
-    ctx.globalAlpha = 1; ctx.strokeStyle = fg; ctx.lineWidth = 2; ctx.strokeRect(gx + M.lane*t + 1, gy + 1, t - 2, ROWS*t - 2);
+  for (const b of M.beams){
+    const a = b.t/.28; ctx.globalAlpha = a; ctx.lineCap = 'round';
+    ctx.strokeStyle = col[b.side]; ctx.lineWidth = t*(.5 + .9*a); ctx.beginPath(); ctx.moveTo(gx + b.x*t, gy + b.y0*t); ctx.lineTo(gx + b.x*t, gy + b.y1*t); ctx.stroke();
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = t*.3; ctx.stroke(); ctx.globalAlpha = 1;
+  }
+  ctx.lineWidth = Math.max(1, t*.12);
+  for (const b of M.bullets){ ctx.beginPath(); ctx.arc(gx + b.x*t, gy + b.y*t, Math.max(2, t*.3), 0, 7); ctx.fillStyle = bg; ctx.fill(); ctx.strokeStyle = fg; ctx.stroke(); }
+  for (const u of M.units) drawUnit(u, col[u.side], fg, bg, ice);
+  for (const q of M.shells){
+    const p = q.t/q.dur, x = gx + (q.x0 + (q.x1 - q.x0)*p)*t, y = gy + (q.y0 + (q.y1 - q.y0)*p)*t;
+    ctx.beginPath(); ctx.arc(x, y, t*(.4 + .5*Math.sin(Math.PI*p)), 0, 7); ctx.fillStyle = fg; ctx.fill(); ctx.strokeStyle = bg; ctx.stroke();
+  }
+  for (const q of M.puffs){ ctx.globalAlpha = q.t/.4; ctx.strokeStyle = fg; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(gx + q.x*t, gy + q.y*t, t*(2.4 - 3*q.t), 0, 7); ctx.stroke(); ctx.globalAlpha = 1; }
+  if (M.sel >= 0 && !M.over){
+    const id = M.queue[M.sel], C = CARDS[id], c = Math.floor(M.cur.x), r = Math.floor(M.cur.y), bad = !!valid(0, id, M.cur.x, M.cur.y);
+    ctx.strokeStyle = fg; ctx.lineWidth = 2; ctx.setLineDash(bad ? [4, 4] : []); ctx.fillStyle = fg; ctx.globalAlpha = bad ? .6 : 1;
+    ctx.beginPath();
+    if (id === 'trench') ctx.rect(gx + (c - 1)*t, gy + (r - 7)*t, 3*t, 8*t);
+    else if (id === 'crossfire') ctx.rect(gx, gy + (r - 1)*t, COLS*t, 2*t);
+    else ctx.arc(gx + (c + .5)*t, gy + (r + .5)*t, (C.r || 1)*t + t*.5, 0, 7);
+    ctx.stroke(); ctx.globalAlpha = bad ? .06 : .16; ctx.fill(); ctx.globalAlpha = 1; ctx.setLineDash([]);
   }
   if (M.note && M.note.t > 0){
-    const y = gy + (M.note.side ? 2.5 : ROWS - 2.5)*t;
+    const y = gy + (M.note.side ? 5 : ROWS - 5)*t, size = Math.round(Math.min(26, t*1.9));
     ctx.globalAlpha = Math.min(1, M.note.t*2); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.font = `${Math.round(t*.95)}px "Lilita One", "Arial Black", sans-serif`;
-    ctx.lineWidth = Math.max(3, t*.16); ctx.lineJoin = 'round'; ctx.strokeStyle = bg; ctx.strokeText(M.note.text, gx + COLS*t/2, y);
+    ctx.font = `${size}px "Lilita One", "Arial Black", sans-serif`;
+    ctx.lineWidth = Math.max(3, size*.18); ctx.lineJoin = 'round'; ctx.strokeStyle = bg; ctx.strokeText(M.note.text, gx + COLS*t/2, y);
     ctx.fillStyle = fg; ctx.fillText(M.note.text, gx + COLS*t/2, y);
     ctx.globalAlpha = 1;
   }
@@ -585,16 +575,17 @@ function hud(){
   $('clock').textContent = Math.max(0, Math.ceil(M.t));
   $('energy').style.width = (A.energy*10) + '%';
   $('energy-n').textContent = Math.floor(A.energy) + '/' + MAXE;
-  const next = CARDS[M.queue[HAND]], key = M.queue.slice(0, HAND + 1).join() + M.sel;
+  const next = CARDS[M.queue[HAND]], key = M.queue.slice(0, HAND + 1).join() + M.sel + M.idle;
   if (key !== M.handKey){
     M.handKey = key;
     for (let k = 0; k < HAND; k++){ const c = CARDS[M.queue[k]]; $('pow-' + k).innerHTML = c ? `<b>${c.name}<i>${c.cost}</i></b><u>${c.kind}</u><span>${c.desc}</span>` : ''; }
-    $('hint').textContent = M.idle ? '' : (M.sel >= 0 ? 'Now tap a lane. ' : 'Pick a card, then tap a lane. ') + (next ? 'Next up: ' + next.name : '');
+    const sel = CARDS[M.queue[M.sel]];
+    $('hint').textContent = M.idle ? '' : sel ? (sel.aim === 'own' ? 'Tap one of your tiles to build it there.' : 'Tap the board where you want it.') : 'Pick a card.' + (next ? ' Next up: ' + next.name : '');
   }
   for (let k = 0; k < HAND; k++){
     const c = CARDS[M.queue[k]], b = $('pow-' + k), can = c && !M.idle && !M.over && A.lock <= 0 && A.energy >= c.cost;
-    b.disabled = !c || M.idle || M.over || (!M.g && !can);
-    b.classList.toggle('ready', !!can); b.classList.toggle('sel', M.g && M.sel === k);
+    b.disabled = !c || M.idle || M.over;
+    b.classList.toggle('ready', !!can); b.classList.toggle('sel', M.sel === k);
   }
 }
 let last = 0;
@@ -608,25 +599,21 @@ function frame(now){
 /* ---------- input ---------- */
 function aim(e, tap){
   if (!live()) return;
-  const r = cv.getBoundingClientRect(), x = (e.clientX - r.left - geo.gx)/geo.t;
-  if (!M.g){ M.sides[0].x = Math.min(COLS - .5, Math.max(.5, x)); return; }
-  if (x < 0 || x >= COLS) return;
-  M.lane = Math.floor(x);
-  if (tap){ if (M.sel >= 0) playAt(M.sel, M.lane); else M.note = { text:'Pick a card first', side:0, t:1 }; }
+  const r = cv.getBoundingClientRect(), x = (e.clientX - r.left - geo.gx)/geo.t, y = (e.clientY - r.top - geo.gy)/geo.t;
+  if (x < 0 || y < 0 || x >= COLS || y >= ROWS) return;
+  M.cur = { x, y };
+  if (tap){ if (M.sel >= 0) playAt(M.sel, x, y); else M.note = { text:'Pick a card first', side:0, t:1 }; }
 }
-cv.addEventListener('pointerdown', e => { try { if (M && !M.g) cv.setPointerCapture(e.pointerId); } catch {} aim(e, true); });
+cv.addEventListener('pointerdown', e => aim(e, true));
 cv.addEventListener('pointermove', e => aim(e, false));
 document.addEventListener('keydown', e => {
-  const left = e.key === 'ArrowLeft' || e.key === 'a', right = e.key === 'ArrowRight' || e.key === 'd';
-  if (M && M.g && live()){
-    if (left) M.lane = Math.max(0, M.lane - 1);
-    else if (right) M.lane = Math.min(COLS - 1, M.lane + 1);
-    else if ((e.key === 'Enter' || e.key === ' ') && M.sel >= 0){ e.preventDefault(); playAt(M.sel, M.lane); }
-  } else if (left) keyDir = -1; else if (right) keyDir = 1;
-  if (e.key >= '1' && e.key <= String(HAND)) power(+e.key - 1);
+  if (!live()){ if (e.key === 'Escape' || e.key === 'p') pause(!paused); return; }
+  const mv = { ArrowLeft:[-1, 0], ArrowRight:[1, 0], ArrowUp:[0, -1], ArrowDown:[0, 1] }[e.key];
+  if (mv){ e.preventDefault(); M.cur = { x:clamp(M.cur.x + mv[0], .5, COLS - .5), y:clamp(M.cur.y + mv[1], .5, ROWS - .5) }; }
+  else if ((e.key === 'Enter' || e.key === ' ') && M.sel >= 0){ e.preventDefault(); playAt(M.sel, M.cur.x, M.cur.y); }
+  else if (e.key >= '1' && e.key <= String(HAND)) power(+e.key - 1);
   else if (e.key === 'Escape' || e.key === 'p') pause(!paused);
 });
-document.addEventListener('keyup', e => { if (['ArrowLeft','ArrowRight','a','d'].includes(e.key)) keyDir = 0; });
 for (let k = 0; k < HAND; k++) $('pow-' + k).addEventListener('click', () => power(k));
 function pause(on){
   if (!M || M.idle || M.over) return;
@@ -645,11 +632,11 @@ function home(){
   const boss = P.level % 5 === 0;
   $('home-title').textContent = 'Stage ' + P.level + (boss ? ' · Boss' : '');
   document.querySelectorAll('#tabs .tab').forEach(b => { b.classList.toggle('on', b.dataset.tab === tab); $('tab-' + b.dataset.tab).hidden = b.dataset.tab !== tab; });
-  $('home-how').textContent = `Pick a card from your hand, then tap a lane on the board. Turrets set up at your edge of that lane and fire until they wear out; strikes land in that lane. Shots flip the first rival tile they reach. Hold more of the field after ${TIME} seconds.`;
+  $('home-how').textContent = `Pick a card, then tap the board. Turrets go anywhere on your own tiles and fire until they wear out, or until the rival takes the tile under them. Strikes land where you tap. Boosts and tricks play the moment you tap the card. Hold more of the field after ${TIME} seconds.`;
   $('home-sub').textContent = 'The rival builds turrets of its own'
     + (P.level >= 3 ? ' and has plated tiles that take two hits.' : '.')
     + (P.level >= 4 && P.level % 4 ? ' Walls on the field stop shots.' : '')
-    + (boss ? ' Boss stage: two fixed rival turrets and a faster rival, for double scrap.' : '');
+    + (boss ? ' Boss stage: the rival starts with two long-lived Sweepers. Double scrap if you win.' : '');
   $('deck-head').textContent = `Deck · ${P.deck.length} of ${DECK} chosen`;
   $('cards').innerHTML = Object.entries(CARDS).map(([k, c]) => {
     const open = P.level >= c.unlock, on = P.deck.includes(k), r = P.rank[k] || 0, full = r >= MAXRANK;
@@ -667,17 +654,15 @@ function home(){
 }
 $('tabs').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (!b) return; tab = b.dataset.tab; home(); });
 $('cards').addEventListener('click', e => {
+  const keep = fn => { const top = $('tab-deck').scrollTop; fn(); home(); $('tab-deck').scrollTop = top; };
   const u = e.target.closest('[data-rank]');
   if (u && !u.disabled){
     const k = u.dataset.rank, r = P.rank[k] || 0; if (r >= MAXRANK || P.coins < rcost(r)) return;
-    P.coins -= rcost(r); P.rank[k] = r + 1; store.set(P); tone(700, .1); tone(1050, .12, 'triangle', .05, .07);
-    const top = $('tab-deck').scrollTop; home(); $('tab-deck').scrollTop = top; return;
+    keep(() => { P.coins -= rcost(r); P.rank[k] = r + 1; store.set(P); tone(700, .1); tone(1050, .12, 'triangle', .05, .07); }); return;
   }
   const b = e.target.closest('[data-card]'); if (!b || b.disabled) return;
   const k = b.dataset.card, at = P.deck.indexOf(k);
-  if (at >= 0) P.deck.splice(at, 1); else if (P.deck.length < DECK) P.deck.push(k);
-  store.set(P); tone(520, .06);
-  const top = $('tab-deck').scrollTop; home(); $('tab-deck').scrollTop = top;
+  keep(() => { if (at >= 0) P.deck.splice(at, 1); else if (P.deck.length < DECK) P.deck.push(k); store.set(P); tone(520, .06); });
 });
 $('upgrades').addEventListener('click', e => {
   const b = e.target.closest('[data-up]'); if (!b || b.disabled) return;
@@ -693,7 +678,7 @@ $('btn-pause').addEventListener('click', () => pause(true));
 $('pause-resume').addEventListener('click', () => pause(false));
 $('pause-quit').addEventListener('click', home);
 
-window.__flipfire = { P, play:() => play(), state:() => M, run(bot){ while (!M.over){ bot(M, power, playAt); step(1/30); } return share(); } };
+window.__flipfire = { P, CARDS, UNITS, play:() => play(), state:() => M, run(bot){ while (!M.over){ bot(M, playAt, power); step(1/30); } return share(); } };
 new ResizeObserver(layout).observe($('field'));
 layout(); home(); requestAnimationFrame(frame);
 })();

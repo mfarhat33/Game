@@ -13,9 +13,10 @@ Modes: Skirmish against 1–3 computer rivals (three skill levels, three board s
 
 An original real-time tile battle in `flipfire.html`; open it in a browser to play.
 
-- Pick a card from your hand, then tap a lane on the 11 by 18 board to play it there.
-- Turret cards set up a gun at your edge of the lane; strike cards land in the lane. Shots flip the first rival tile they reach.
-- Build an 8-card deck from 25 cards (turrets, strikes, defences, boosts, tricks). Energy fills over time; you hold four cards at once.
+- The field is a 22 by 36 grid split between you and a rival. Pick a card from your hand, then tap the board to play it there.
+- Turret cards (Sentry, Sweeper, Pike, Mortar, Spinner) go anywhere on your own tiles. A turret is lost when the rival takes the tile under it.
+- Strike cards land where you tap; boosts and tricks play the moment you tap the card.
+- Build an 8-card deck from 27 cards. Energy fills over time; you hold four cards at once.
 - Scrap earned each stage buys workshop upgrades and raises individual cards up to rank 4.
-- Rivals build their own turrets, gain plated tiles, and some stages add walls. Every fifth stage is a boss stage.
+- Later stages add plated tiles and walls. Every fifth stage is a boss stage.
 - Hold more of the field after 75 seconds to win.
