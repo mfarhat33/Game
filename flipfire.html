@@ -4,14 +4,14 @@
 <style>
 /* Layout: portrait arcade screen. Share bar and clock on top, tile field in the middle, energy and three powers under the thumb. */
 :root{
-  --bg:#F1F3F1; --panel:#FFFFFF; --fg:#16201D; --muted:#5A6763; --line:#D4DAD7; --a:#12A87C; --b:#DB3F74; --ice:#58B7E8; --gold:#C98A00;
+  --bg:#F1F3F1; --panel:#FFFFFF; --fg:#16201D; --muted:#5A6763; --line:#D4DAD7; --a:#12A87C; --b:#DB3F74; --ice:#58B7E8; --gold:#C98A00; --vio:#6F52D9; --org:#C8611B;
   --display:"Lilita One","Arial Black",system-ui,sans-serif;
   --body:"Nunito Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
 }
 @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
-  --bg:#0D1413; --panel:#16201E; --fg:#EDF3F1; --muted:#93A29D; --line:#28342F; --a:#1FC592; --b:#EE5587; --ice:#6CC6F2; --gold:#F2B735; color-scheme:dark } }
+  --bg:#0D1413; --panel:#16201E; --fg:#EDF3F1; --muted:#93A29D; --line:#28342F; --a:#1FC592; --b:#EE5587; --ice:#6CC6F2; --gold:#F2B735; --vio:#A690FF; --org:#FF9A52; color-scheme:dark } }
 :root[data-theme="dark"]{
-  --bg:#0D1413; --panel:#16201E; --fg:#EDF3F1; --muted:#93A29D; --line:#28342F; --a:#1FC592; --b:#EE5587; --ice:#6CC6F2; --gold:#F2B735; color-scheme:dark }
+  --bg:#0D1413; --panel:#16201E; --fg:#EDF3F1; --muted:#93A29D; --line:#28342F; --a:#1FC592; --b:#EE5587; --ice:#6CC6F2; --gold:#F2B735; --vio:#A690FF; --org:#FF9A52; color-scheme:dark }
 
 html,body{height:100%}
 body{background:var(--bg);color:var(--fg);font-family:var(--body);font-weight:500;font-size:15px;line-height:1.4;overflow:hidden;
@@ -88,6 +88,22 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
 .rk small{color:var(--gold);font-size:12px}
 .rk:disabled{opacity:.45;cursor:default}
 .rk:not(:disabled):hover{border-color:var(--gold)}
+.ic{flex:none;width:30px;height:30px;border-radius:9px;display:grid;place-items:center;background:color-mix(in srgb,var(--k) 17%,transparent)}
+.pow .ic,.opt .ic,.strip .ic{color:var(--k)}
+.ic svg{width:20px;height:20px;display:block}
+.k-Build{--k:var(--a)} .k-Strike{--k:var(--gold)} .k-Guard{--k:var(--ice)} .k-Boost{--k:var(--vio)} .k-Trick{--k:var(--org)}
+.pow{position:relative}
+.pow .ic{margin-bottom:3px}
+.pow.sel .ic{background:color-mix(in srgb,var(--bg) 22%,transparent)}
+.cost{position:absolute;top:7px;right:7px;min-width:21px;height:21px;padding:0 5px;border-radius:11px;background:var(--line);color:var(--muted);font-style:normal;font-weight:800;font-size:12.5px;display:grid;place-items:center}
+.pow.ready .cost{background:var(--gold);color:#1B1300}
+.strip{display:grid;grid-template-columns:repeat(8,1fr);gap:4px}
+.strip .ic{width:100%;height:34px}
+.strip .gap{height:34px;border:1px dashed var(--line);border-radius:9px}
+.chips{display:flex;gap:4px;flex-wrap:wrap}
+.chipb{border:1px solid var(--line);background:none;border-radius:999px;padding:4px 10px;font-weight:800;font-size:12.5px}
+.chipb.on{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.opt.cardbtn{padding:7px 9px;gap:9px}
 </style>
 
 <div class="app">
@@ -131,8 +147,10 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
       <p id="home-how"></p>
       <h3>This stage</h3>
       <p id="home-sub"></p>
+      <h3>Coming up</h3>
+      <p id="home-next"></p>
     </div>
-    <div class="pane" id="tab-deck" hidden><h3 id="deck-head">Deck</h3><div class="list" id="cards"></div></div>
+    <div class="pane" id="tab-deck" hidden><h3 id="deck-head">Deck</h3><div class="strip" id="strip"></div><div class="chips" id="kinds"></div><div class="list" id="cards"></div></div>
     <div class="pane" id="tab-workshop" hidden><p>Scrap also raises card ranks in the Deck tab.</p><div class="list" id="upgrades"></div></div>
     <div class="row">
       <button class="btn" id="btn-sound">Sound on</button>
@@ -173,7 +191,9 @@ const UNITS = {
   sweeper: { gap:.1,  life:12, speed:20 },
   pike:    { gap:1.6, life:14 },
   mortar:  { gap:1.3, life:14 },
-  spinner: { gap:.07, life:10, speed:18 }
+  spinner: { gap:.07, life:10, speed:18 },
+  twin:    { gap:.2,  life:14, speed:22 },
+  flak:    { gap:.14, life:14 }
 };
 /* aim: 'own' = must land on your tiles, 'any' = anywhere on the board, 'none' = plays the moment you tap the card */
 const CARDS = {
@@ -203,8 +223,57 @@ const CARDS = {
   meteor:   { name:'Meteor',    cost:7, unlock:9, kind:'Strike', aim:'none', desc:'Six blasts on rival ground' },
   refit:    { name:'Refit',     cost:2, unlock:9, kind:'Boost',  aim:'none', desc:'Your turrets are good as new' },
   reclaim:  { name:'Reclaim',   cost:5, unlock:10, kind:'Guard', aim:'none', desc:'Take back the last 30 tiles lost' },
-  hijack:   { name:'Hijack',    cost:6, unlock:10, kind:'Trick', aim:'any',  r:6, desc:'Nearest rival turret joins you' }
+  hijack:   { name:'Hijack',    cost:6, unlock:10, kind:'Trick', aim:'any',  r:6, desc:'Nearest rival turret joins you' },
+  barricade:{ name:'Barricade', cost:3, unlock:2, kind:'Guard',  aim:'own',  desc:'Wall 5 wide that stops shots, 10s' },
+  spark:    { name:'Spark',     cost:0, unlock:3, kind:'Boost',  aim:'none', desc:'Gain 3 energy right now' },
+  twin:     { name:'Twin',      cost:5, unlock:4, kind:'Build',  aim:'own',  r:1, desc:'Turret with two barrels side by side' },
+  frost:    { name:'Frost',     cost:2, unlock:4, kind:'Trick',  aim:'any',  r:5, desc:'Freeze rival turrets near the tap, 6s' },
+  corrode:  { name:'Corrode',   cost:2, unlock:5, kind:'Trick',  aim:'none', desc:'Strip all rival plating and mines' },
+  wedge:    { name:'Wedge',     cost:4, unlock:6, kind:'Strike', aim:'any',  desc:'Flip a widening wedge ahead' },
+  flak:     { name:'Flak',      cost:4, unlock:6, kind:'Build',  aim:'own',  r:5, desc:'Turret that shoots down rival shots' },
+  echo:     { name:'Echo',      cost:3, unlock:7, kind:'Boost',  aim:'none', desc:'Repeat your last strike or boost' },
+  beachhead:{ name:'Beachhead', cost:5, unlock:8, kind:'Strike', aim:'any',  r:2, desc:'Flip a patch and drop a Sentry in it' }
 };
+const ICON = {
+  sentry:'<circle cx="12" cy="15" r="5"/><path d="M12 10V3"/>',
+  sweeper:'<circle cx="12" cy="16" r="4.5"/><path d="M12 12 7.5 5.5M4 9a10 10 0 0 1 16 0"/>',
+  pike:'<circle cx="12" cy="18" r="3.5"/><path d="M12 14V3M9 6l3-3 3 3"/>',
+  mortar:'<circle cx="7" cy="18" r="3.5"/><path d="M7 14C8 6 15 4 18 10"/><circle cx="18" cy="14" r="2.5"/>',
+  spinner:'<circle cx="12" cy="12" r="3"/><path d="M12 9V3M14.6 13.5l5.2 3M9.4 13.5l-5.2 3"/>',
+  twin:'<circle cx="12" cy="16" r="5"/><path d="M9.5 11.5V3M14.5 11.5V3"/>',
+  flak:'<circle cx="12" cy="17" r="4"/><path d="M12 13V9M5 6l3 3M19 6l-3 3M12 2v3"/>',
+  trench:'<rect x="8" y="3" width="8" height="18" rx="1"/><path d="M12 17V8M9.5 10.5 12 8l2.5 2.5"/>',
+  splash:'<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/>',
+  barrage:'<path d="M5 20V8M12 20V4M19 20V8M3 10l2-2 2 2M10 6l2-2 2 2M17 10l2-2 2 2"/>',
+  crossfire:'<path d="M2 9h20M2 15h20M5 6 2 9l3 3M19 12l3 3-3 3"/>',
+  tide:'<path d="M3 16c3-4 6 4 9 0s6 4 9 0M3 10c3-4 6 4 9 0s6 4 9 0"/>',
+  wildfire:'<path d="M12 3c1 4 6 6 6 11a6 6 0 0 1-12 0c0-3 2-4 3-6 1 2 2 2 3 0z"/>',
+  meteor:'<circle cx="9" cy="15" r="5"/><path d="M13 11l7-7M16 14l5-5M10 8l4-4"/>',
+  wedge:'<path d="M12 20 4 4h16z"/>',
+  beachhead:'<path d="M12 2v9M8 7l4 4 4-4"/><circle cx="12" cy="18" r="3.5"/>',
+  plating:'<rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/>',
+  stasis:'<circle cx="12" cy="12" r="8"/><path d="M9 9l6 6M15 9l-6 6"/>',
+  shield:'<path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"/>',
+  minefield:'<circle cx="12" cy="12" r="4"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.2 2.2M16.2 16.2l2.2 2.2M5.6 18.4l2.2-2.2M16.2 7.8l2.2-2.2"/>',
+  reclaim:'<path d="M4 12a8 8 0 1 0 3-6.2M4 4v5h5"/>',
+  barricade:'<path d="M3 9h18v6H3zM9 9v6M15 9v6"/>',
+  overdrive:'<path d="M13 2 5 13h6l-1 9 8-11h-6z"/>',
+  capacitor:'<rect x="5" y="7" width="14" height="13" rx="2"/><path d="M9 7V4h6v3M12 10v7M8.5 13.5h7"/>',
+  heavy:'<path d="M9 21V9a3 3 0 0 1 6 0v12zM9 16h6"/>',
+  broadhead:'<path d="M12 3 5 13h14zM12 13v8"/>',
+  refit:'<circle cx="12" cy="12" r="8"/><path d="M12 8v8M8 12h8"/>',
+  spark:'<path d="M12 2v6M12 16v6M2 12h6M16 12h6"/><circle cx="12" cy="12" r="2"/>',
+  echo:'<path d="M9 5a9 9 0 0 1 0 14M14 7.5a6 6 0 0 1 0 9"/><circle cx="5" cy="12" r="1.5"/>',
+  jam:'<circle cx="12" cy="12" r="8"/><path d="M10 8v8M14 8v8"/>',
+  turncoat:'<path d="M4 9h12a4 4 0 0 1 0 8H8M7 6 4 9l3 3M11 14l-3 3 3 3"/>',
+  lockdown:'<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+  sabotage:'<circle cx="12" cy="12" r="5"/><path d="M4 4l16 16"/>',
+  hijack:'<circle cx="12" cy="15" r="5"/><path d="M12 10V4M8 7l4-3 4 3M10 15h4"/>',
+  frost:'<path d="M12 2v20M3.3 7l17.4 10M3.3 17 20.7 7"/>',
+  corrode:'<rect x="4" y="4" width="16" height="16" rx="2" stroke-dasharray="3 3"/><path d="M9 15l6-6"/>'
+};
+const ic = id => `<span class="ic k-${CARDS[id].kind}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[id] || ''}</svg></span>`;
+const KINDS = ['All', 'Build', 'Strike', 'Guard', 'Boost', 'Trick'];
 const UPG = {
   rapid:  { name:'Rapid loader', max:8, desc:'+7% turret fire rate per rank' },
   dynamo: { name:'Dynamo',       max:6, desc:'+10% energy flow per rank' },
@@ -222,7 +291,7 @@ const P = store.get({ level:1, coins:0, up:{ rapid:0, dynamo:0, van:0 }, sound:t
 P.rank = P.rank || {};
 P.deck = (P.deck || []).filter(k => CARDS[k] && CARDS[k].unlock <= P.level).slice(0, DECK);
 for (const k of Object.keys(CARDS)) if (P.deck.length < DECK && CARDS[k].unlock <= P.level && !P.deck.includes(k)) P.deck.push(k);
-let tab = 'battle';
+let tab = 'battle', kindF = 'All';
 
 /* ---------- sound ---------- */
 let actx = null, lastTick = 0;
@@ -260,9 +329,9 @@ function newMatch(idle){
   queue.sort(() => Math.random() - .5);
   { const at = queue.findIndex(k => UNITS[k]); if (at > 0) queue.unshift(queue.splice(at, 1)[0]); }
   const foe = builds.concat(builds, n >= 2 ? ['trench','splash'] : [], n >= 3 ? ['barrage','overdrive'] : [], n >= 4 ? ['crossfire'] : [], n >= 5 ? ['plating'] : [],
-    n >= 6 ? ['tide','sabotage'] : [], n >= 8 ? ['wildfire','minefield'] : [], n >= 10 ? ['meteor','jam'] : []);
+    n >= 6 ? ['tide','sabotage','wedge'] : [], n >= 9 ? ['frost'] : [], n >= 8 ? ['wildfire','minefield'] : [], n >= 10 ? ['meteor','jam'] : []);
   M = { boss, idle:!!idle, over:false, t:TIME, sel:-1, cur:{ x:COLS/2, y:ROWS - 8 }, owner, hp, mine, flash, lost:[[], []], note:null,
-    bullets:[], units:[], beams:[], shells:[], puffs:[], queue, foe, foeNext:'sentry', handKey:'',
+    bullets:[], units:[], beams:[], shells:[], puffs:[], temps:[], last:[null, null], queue, foe, foeNext:'sentry', handKey:'',
     sides:[
       { rate:1 + .07*P.up.rapid, flow:.8*(1 + .1*P.up.dynamo), energy:5, over:0, frozen:0, shield:0, cap:0, heavy:0, wide:0, lock:0 },
       { rate:Math.min(1.3, .65 + .05*n), flow:Math.min(.95, .26 + .045*n), energy:2, over:0, frozen:0, shield:0, cap:0, heavy:0, wide:0, lock:0 }
@@ -275,7 +344,7 @@ function addUnit(side, type, x, y, pw, life){
   const mineU = M.units.filter(u => u.side === side && u.max < 900);
   if (mineU.length >= MAXUNITS) kill(mineU[0], true);
   const max = life || UNITS[type].life*pw;
-  M.units.push({ side, type, x, y, life:max, max, cd:.3, t:Math.random()*3, ang:0 });
+  M.units.push({ side, type, x, y, life:max, max, cd:.3, t:Math.random()*3, ang:0, frz:0 });
 }
 function kill(u, quiet){
   const at = M.units.indexOf(u); if (at < 0) return;
@@ -322,6 +391,11 @@ function fireUnit(u){
     M.beams.push({ x:u.x, y0:u.y, y1:end + .5, side:u.side, t:.28 }); tone(u.side ? 300 : 880, .12, 'sawtooth', .03);
   } else if (u.type === 'mortar'){
     M.shells.push({ side:u.side, x0:u.x, y0:u.y, x1:clamp(u.x + (Math.random()*6 - 3), .5, COLS - .5), y1:clamp(u.y + f*(9 + Math.random()*7), .5, ROWS - .5), t:0, dur:.75 });
+  } else if (u.type === 'twin'){ bullet(u.side, u.x - .55, u.y, 0, U.speed); bullet(u.side, u.x + .55, u.y, 0, U.speed); }
+  else if (u.type === 'flak'){
+    let best = -1, bd = 30;
+    M.bullets.forEach((b, k) => { if (b.side === u.side) return; const d = (b.x - u.x)**2 + (b.y - u.y)**2; if (d < bd){ bd = d; best = k; } });
+    if (best >= 0){ const b = M.bullets[best]; M.puffs.push({ x:b.x, y:b.y, t:.15, side:u.side }); M.bullets.splice(best, 1); }
   } else bullet(u.side, u.x, u.y, u.ang, U.speed);
 }
 
@@ -338,7 +412,9 @@ function valid(side, id, x, y){
     if (M.owner[i] !== side) return 'Build on your own tiles';
     if (M.units.some(u => u.side === side && (u.x - x)**2 + (u.y - y)**2 < 2.6)) return 'Too close to a turret';
   }
-  if ((id === 'sabotage' || id === 'hijack') && !nearestUnit(1 - side, x, y, C.r)) return 'No rival turret there';
+  if ((id === 'sabotage' || id === 'hijack' || id === 'frost') && !nearestUnit(1 - side, x, y, C.r)) return 'No rival turret there';
+  if (id === 'echo' && !M.last[side]) return 'Nothing to repeat yet';
+  if (id === 'beachhead' && M.owner[i] === 2) return 'Not on a wall';
   return '';
 }
 function cast(side, id, x, y){
@@ -388,6 +464,16 @@ function cast(side, id, x, y){
     const u = nearestUnit(1 - side, x, y, CARDS[id].r);
     if (u){ u.side = side; u.max = UNITS[u.type].life*pw; u.life = u.max; const i = Math.floor(u.y)*COLS + Math.floor(u.x); if (M.owner[i] !== 2) flip(i, side); blast(side, Math.floor(u.x), Math.floor(u.y), 2); }
   }
+  if (id === 'barricade'){
+    for (let dc = -2; dc <= 2; dc++){ const cc = c + dc, i = r*COLS + cc; if (inb(cc, r) && M.owner[i] === side && !M.units.some(u => Math.floor(u.x) === cc && Math.floor(u.y) === r)){ M.owner[i] = 2; M.hp[i] = 0; M.mine[i] = 0; M.temps.push({ i, side, t:10*pw }); } }
+  }
+  else if (id === 'corrode'){ for (let i = 0; i < N; i++) if (M.owner[i] === 1 - side && (M.hp[i] || M.mine[i])){ M.hp[i] = 0; M.mine[i] = 0; M.flash[i] = .6; } }
+  else if (id === 'wedge'){ for (let k = 0; k < R(7); k++){ const h = Math.floor(k*.6); for (let dc = -h; dc <= h; dc++) if (inb(c + dc, r + f*k)) strike((r + f*k)*COLS + c + dc, side); } }
+  else if (id === 'beachhead'){ blast(side, c, r, 2); if (M.owner[r*COLS + c] === side) addUnit(side, 'sentry', c + .5, r + .5, 1, 8*pw); }
+  else if (id === 'spark') S.energy = Math.min(MAXE, S.energy + 3*pw);
+  else if (id === 'frost'){ for (const u of M.units) if (u.side !== side && (u.x - x)**2 + (u.y - y)**2 <= 25) u.frz = 6*pw; }
+  else if (id === 'echo'){ const L = M.last[side]; if (L){ cast(side, L.id, L.x, L.y); M.note = { text:'Echo: ' + CARDS[L.id].name, side, t:1.4 }; } return; }
+  if (!UNITS[id]) M.last[side] = { id, x, y };
   M.note = { text:CARDS[id].name, side, t:1.4 };
   tone(side ? 240 : 660, .16, 'triangle', .05); tone(side ? 180 : 990, .18, 'sine', .04, .07);
 }
@@ -424,7 +510,7 @@ function rival(){
       x = clamp(best + Math.round(Math.random()*6 - 3), 0, COLS - 1) + .5; y = clamp(fr - 3 - Math.floor(Math.random()*7), 1, ROWS - 2) + .5;
       ok = !valid(1, id, x, y);
     }
-  } else if (id === 'sabotage'){ const mine = M.units.filter(u => u.side === 0); if (mine.length){ const u = mine[Math.floor(Math.random()*mine.length)]; x = u.x; y = u.y; } else ok = false; }
+  } else if (id === 'sabotage' || id === 'frost'){ const mine = M.units.filter(u => u.side === 0); if (mine.length){ const u = mine[Math.floor(Math.random()*mine.length)]; x = u.x; y = u.y; } else ok = false; }
   else if (id === 'plating' || id === 'minefield') y = Math.max(.5, fr - 2.5);
   else if (id === 'splash') y = Math.min(ROWS - .5, fr + 2.5);
   if (!ok || valid(1, id, x, y)){ again(); return; }
@@ -439,7 +525,8 @@ function step(dt){
   for (let k = M.units.length - 1; k >= 0; k--){
     const u = M.units[k], S = M.sides[u.side];
     if (u.max < 900){ u.life -= dt; if (u.life <= 0){ kill(u, true); continue; } }
-    if (S.frozen > 0) continue;
+    if (u.frz > 0) u.frz -= dt;
+    if (S.frozen > 0 || u.frz > 0) continue;
     u.t += dt;
     if (u.type === 'sweeper') u.ang = Math.sin(u.t*1.7)*.95; else if (u.type === 'spinner') u.ang = u.t*3.2;
     u.cd -= dt; if (u.cd <= 0){ fireUnit(u); u.cd = UNITS[u.type].gap/(S.rate*(S.over > 0 ? 2 : 1)); }
@@ -463,6 +550,7 @@ function step(dt){
     const q = M.shells[k]; q.t += dt;
     if (q.t >= q.dur){ blast(q.side, Math.floor(q.x1), Math.floor(q.y1), 2); tone(110, .14, 'sine', .04); M.puffs.push({ x:q.x1, y:q.y1, t:.3, side:q.side }); M.shells.splice(k, 1); }
   }
+  for (let k = M.temps.length - 1; k >= 0; k--){ const q = M.temps[k]; q.t -= dt; if (q.t <= 0){ if (M.owner[q.i] === 2) M.owner[q.i] = q.side; M.flash[q.i] = .4; M.temps.splice(k, 1); } }
   for (const list of [M.beams, M.puffs]) for (let k = list.length - 1; k >= 0; k--){ list[k].t -= dt; if (list[k].t <= 0) list.splice(k, 1); }
   if (M.note && M.note.t > 0) M.note.t -= dt;
   for (let i = 0; i < N; i++) if (M.flash[i] > 0) M.flash[i] = Math.max(0, M.flash[i] - 4*dt);
@@ -496,7 +584,7 @@ function layout(){
   geo = { t, dpr, w:r.width, h:r.height, gx:(r.width - COLS*t)/2, gy:(r.height - ROWS*t)/2 };
 }
 function drawUnit(u, col, fg, bg, ice){
-  const { t, gx, gy } = geo, S = M.sides[u.side], x = gx + u.x*t, y = gy + u.y*t, R = t*1.05, c = S.frozen > 0 ? ice : col;
+  const { t, gx, gy } = geo, S = M.sides[u.side], x = gx + u.x*t, y = gy + u.y*t, R = t*1.05, c = S.frozen > 0 || u.frz > 0 ? ice : col;
   ctx.save(); ctx.translate(x, y);
   ctx.beginPath(); ctx.arc(0, 0, R, 0, 7); ctx.fillStyle = fg; ctx.fill();
   ctx.lineWidth = Math.max(2, t*.2); ctx.strokeStyle = bg; ctx.stroke();
@@ -508,6 +596,8 @@ function drawUnit(u, col, fg, bg, ice){
   else if (u.type === 'sweeper') line(u.ang, R*.95, t*.3);
   else if (u.type === 'pike'){ line(0, R*1.25, t*.18); }
   else if (u.type === 'mortar'){ ctx.lineWidth = t*.22; ctx.beginPath(); ctx.arc(0, 0, R*.5, 0, 7); ctx.stroke(); }
+  else if (u.type === 'twin'){ for (const o of [-.38, .38]){ ctx.lineWidth = t*.24; ctx.beginPath(); ctx.moveTo(o*R, 0); ctx.lineTo(o*R, fwd(u.side)*R*.95); ctx.stroke(); } }
+  else if (u.type === 'flak'){ for (let k = 0; k < 4; k++) line(k*1.5708 + .785, R*.7, t*.18); ctx.globalAlpha = .3; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(0, 0, 5.4*t, 0, 7); ctx.stroke(); ctx.globalAlpha = 1; }
   else for (let k = 0; k < 3; k++) line(u.ang + k*2.094, R*.85, t*.2);
   ctx.beginPath(); ctx.arc(0, 0, t*.26, 0, 7); ctx.fill();
   if (S.over > 0){ ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(0, 0, R + t*.4, 0, 7); ctx.stroke(); }
@@ -556,6 +646,8 @@ function draw(){
     ctx.beginPath();
     if (id === 'trench') ctx.rect(gx + (c - 1)*t, gy + (r - 7)*t, 3*t, 8*t);
     else if (id === 'crossfire') ctx.rect(gx, gy + (r - 1)*t, COLS*t, 2*t);
+    else if (id === 'barricade') ctx.rect(gx + (c - 2)*t, gy + r*t, 5*t, t);
+    else if (id === 'wedge'){ ctx.moveTo(gx + (c + .5)*t, gy + (r + 1)*t); ctx.lineTo(gx + (c - 3)*t, gy + (r - 6)*t); ctx.lineTo(gx + (c + 4)*t, gy + (r - 6)*t); ctx.closePath(); }
     else ctx.arc(gx + (c + .5)*t, gy + (r + .5)*t, (C.r || 1)*t + t*.5, 0, 7);
     ctx.stroke(); ctx.globalAlpha = bad ? .06 : .16; ctx.fill(); ctx.globalAlpha = 1; ctx.setLineDash([]);
   }
@@ -578,7 +670,7 @@ function hud(){
   const next = CARDS[M.queue[HAND]], key = M.queue.slice(0, HAND + 1).join() + M.sel + M.idle;
   if (key !== M.handKey){
     M.handKey = key;
-    for (let k = 0; k < HAND; k++){ const c = CARDS[M.queue[k]]; $('pow-' + k).innerHTML = c ? `<b>${c.name}<i>${c.cost}</i></b><u>${c.kind}</u><span>${c.desc}</span>` : ''; }
+    for (let k = 0; k < HAND; k++){ const c = CARDS[M.queue[k]]; $('pow-' + k).innerHTML = c ? `${ic(M.queue[k])}<i class="cost">${c.cost}</i><b>${c.name}</b><span>${c.desc}</span>` : ''; }
     const sel = CARDS[M.queue[M.sel]];
     $('hint').textContent = M.idle ? '' : sel ? (sel.aim === 'own' ? 'Tap one of your tiles to build it there.' : 'Tap the board where you want it.') : 'Pick a card.' + (next ? ' Next up: ' + next.name : '');
   }
@@ -638,9 +730,13 @@ function home(){
     + (P.level >= 4 && P.level % 4 ? ' Walls on the field stop shots.' : '')
     + (boss ? ' Boss stage: the rival starts with two long-lived Sweepers. Double scrap if you win.' : '');
   $('deck-head').textContent = `Deck · ${P.deck.length} of ${DECK} chosen`;
-  $('cards').innerHTML = Object.entries(CARDS).map(([k, c]) => {
+  const later = Object.values(CARDS).map(c => c.unlock).filter(u => u > P.level), nextAt = later.length ? Math.min(...later) : 0;
+  $('home-next').textContent = nextAt ? `Clear stage ${nextAt - 1} to unlock ${Object.values(CARDS).filter(c => c.unlock === nextAt).map(c => c.name).join(' and ')}.` : 'Every card is unlocked.';
+  $('strip').innerHTML = P.deck.map(ic).join('') + '<span class="gap"></span>'.repeat(DECK - P.deck.length);
+  $('kinds').innerHTML = KINDS.map(k => `<button class="chipb${kindF === k ? ' on' : ''}" data-kind="${k}">${k}</button>`).join('');
+  $('cards').innerHTML = Object.entries(CARDS).filter(([, c]) => kindF === 'All' || c.kind === kindF).sort((a, b) => a[1].unlock - b[1].unlock).map(([k, c]) => {
     const open = P.level >= c.unlock, on = P.deck.includes(k), r = P.rank[k] || 0, full = r >= MAXRANK;
-    return `<div class="cardrow"><button class="opt${on ? ' sel' : ''}" data-card="${k}" ${open && (on || P.deck.length < DECK) ? '' : 'disabled'}><div><b>${c.name} · ${c.cost}</b><small>${c.kind} · ${c.desc}</small></div><em>${!open ? 'Stage ' + c.unlock : on ? 'In deck' : 'Add'}</em></button>`
+    return `<div class="cardrow"><button class="opt cardbtn${on ? ' sel' : ''}" data-card="${k}" ${open && (on || P.deck.length < DECK) ? '' : 'disabled'}>${ic(k)}<div><b>${c.name} · ${c.cost}</b><small>${c.desc}</small></div><em>${!open ? 'Stage ' + c.unlock : on ? 'In deck' : 'Add'}</em></button>`
       + `<button class="rk" data-rank="${k}" aria-label="Raise ${c.name} rank" ${open && !full && P.coins >= rcost(r) ? '' : 'disabled'}>Rank ${r + 1}<small class="num">${full ? 'max' : rcost(r)}</small></button></div>`;
   }).join('');
   $('btn-play').disabled = P.deck.length !== DECK;
@@ -653,6 +749,7 @@ function home(){
   paused = false; newMatch(true);
 }
 $('tabs').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (!b) return; tab = b.dataset.tab; home(); });
+$('kinds').addEventListener('click', e => { const b = e.target.closest('[data-kind]'); if (!b) return; kindF = b.dataset.kind; home(); });
 $('cards').addEventListener('click', e => {
   const keep = fn => { const top = $('tab-deck').scrollTop; fn(); home(); $('tab-deck').scrollTop = top; };
   const u = e.target.closest('[data-rank]');
