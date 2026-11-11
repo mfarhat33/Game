@@ -22,4 +22,4 @@ An original real-time tile battle in `flipfire.html`; open it in a browser to pl
 - Five named rivals rotate by stage. Later stages add plated tiles and walls; every fifth stage is a boss stage.
 - Cleared stages can be replayed, an unfinished match resumes after a reload, and there is an option to stripe the rival's tiles.
 - Every force has a role (Anchor, Pusher, Siege, Killer, Support) and the Forces tab tells you what your deck is missing.
-- A match lasts 2:30. Energy doubles for the last 45 seconds. Hold more of the field when the clock runs out to win.
+- A match lasts 2:30. Energy doubles for the last 45 seconds, and a result within 2% goes to 20 seconds of overtime. Hold more of the field when the clock runs out to win.

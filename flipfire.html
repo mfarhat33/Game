@@ -162,7 +162,49 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
 .goal b{font-weight:800}
 .goal em{margin-left:auto;font-style:normal;font-weight:800;color:var(--gold);white-space:nowrap}
 .goal.done{border-style:solid;opacity:.6}
-@media (prefers-reduced-motion: reduce){ .card{transition:none} }
+/* ---- second skin: depth, motion and gem-shaped counters ---- */
+body{background:radial-gradient(120% 60% at 50% 0%,var(--bg2),transparent 70%),repeating-linear-gradient(135deg,color-mix(in srgb,var(--fg) 3%,transparent) 0 1px,transparent 1px 12px),var(--bg)}
+.score{border-radius:18px;padding:10px 14px;background:linear-gradient(180deg,color-mix(in srgb,var(--fg) 6%,var(--panel)),var(--panel))}
+.who span{font-size:26px}
+.clock{font-size:20px;box-shadow:inset 0 1px 2px rgba(0,0,0,.2)}
+.share{height:14px;border-radius:7px;box-shadow:inset 0 1px 3px rgba(0,0,0,.35)}
+.share span{position:relative;background:linear-gradient(180deg,color-mix(in srgb,var(--a) 65%,#fff),var(--a) 60%);transition:width .25s ease-out}
+.share span::after{content:"";position:absolute;right:-2px;top:0;bottom:0;width:4px;background:#fff;box-shadow:0 0 10px 2px #fff}
+.share i{opacity:.6}
+.ebub{width:36px;min-width:0;height:38px;padding:0;border-radius:0;clip-path:polygon(50% 0,100% 26%,100% 74%,50% 100%,0 74%,0 26%);background:linear-gradient(160deg,color-mix(in srgb,var(--gold) 60%,#fff),var(--gold) 55%,color-mix(in srgb,var(--gold) 70%,#000));font-size:18px}
+.energy{height:16px;border-radius:8px;box-shadow:inset 0 1px 3px rgba(0,0,0,.3)}
+.energy span{background:linear-gradient(180deg,color-mix(in srgb,var(--gold) 60%,#fff),var(--gold) 50%,color-mix(in srgb,var(--gold) 78%,#000));transition:width .15s linear}
+.grp h4::after{order:1}
+.nx{order:2;display:flex;align-items:center;gap:4px;color:var(--muted);font-size:10px}
+.nx .ic{width:20px;height:20px;border-radius:6px;box-shadow:none}
+.nx .ic svg{width:13px;height:13px}
+.card{height:108px;border-radius:16px;border-width:1.5px;padding:9px 4px 11px;box-shadow:0 3px 0 var(--line),0 8px 14px rgba(0,0,0,.16);transition:transform .14s cubic-bezier(.34,1.56,.64,1),filter .2s,opacity .2s}
+.card::before{content:"";position:absolute;inset:0 0 52% 0;border-radius:14px 14px 45% 45%;background:linear-gradient(rgba(255,255,255,.16),rgba(255,255,255,0));pointer-events:none}
+.card .ic{width:42px;height:42px}
+.card .ic svg{width:26px;height:26px}
+.card:not(.ready):not(:disabled){filter:saturate(.4);opacity:.8}
+.card:active:not(:disabled){transform:scale(.95)}
+.card.sel{transform:translateY(-8px) scale(1.04);border-color:var(--fg);box-shadow:0 0 0 2px var(--fg),0 12px 18px rgba(0,0,0,.28);filter:none;opacity:1}
+.card.in{animation:deal .34s cubic-bezier(.34,1.56,.64,1)}
+@keyframes deal{from{transform:translateY(28px) scale(.84);opacity:0}}
+.cost{top:4px;right:4px;width:23px;min-width:0;height:25px;padding:0;border-radius:0;clip-path:polygon(50% 0,100% 26%,100% 74%,50% 100%,0 74%,0 26%);font-size:12.5px}
+.card.pop .cost{animation:pop .32s cubic-bezier(.34,1.56,.64,1)}
+@keyframes pop{50%{transform:scale(1.45)}}
+.pane > *{flex:none}
+.btn{transition:transform .1s}
+.btn:active:not(:disabled){transform:translateY(2px);box-shadow:none}
+.btn.go{background:linear-gradient(180deg,color-mix(in srgb,var(--a) 75%,#fff),var(--a) 55%)}
+.sheet{border-radius:24px}
+.rival{position:relative;overflow:hidden;padding:14px;background:linear-gradient(120deg,color-mix(in srgb,var(--b) 26%,var(--panel)),var(--panel) 75%)}
+.rival::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--b) 10%,transparent) 0 8px,transparent 8px 18px);pointer-events:none;mask-image:linear-gradient(90deg,#000,transparent 70%);-webkit-mask-image:linear-gradient(90deg,#000,transparent 70%)}
+.rival > *{position:relative;z-index:1}
+.stars span{display:inline-block;animation:starpop .5s cubic-bezier(.34,1.56,.64,1) backwards}
+.stars span:nth-child(2){animation-delay:.18s} .stars span:nth-child(3){animation-delay:.36s}
+.stars .off{opacity:.35}
+@keyframes starpop{from{transform:scale(0) rotate(-40deg);opacity:0}}
+.opt{transition:transform .1s}
+.opt:active:not(:disabled){transform:scale(.985)}
+@media (prefers-reduced-motion: reduce){ .card,.btn,.opt,.share span,.energy span{transition:none} .card.in,.card.pop .cost,.stars span{animation:none} }
 </style>
 
 <div class="app">
@@ -184,8 +226,8 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
   <section class="tray" aria-label="Your hand">
     <div class="erow"><span class="ebub num" id="energy-n" aria-label="Energy">0</span><div class="energy" aria-hidden="true"><span id="energy"></span></div></div>
     <div class="hand">
-      <div class="grp guns"><h4>Forces</h4><div class="slots"><button class="card gun" id="pow-0" disabled></button><button class="card gun" id="pow-1" disabled></button></div></div>
-      <div class="grp fx"><h4>Effects</h4><div class="slots"><button class="card" id="pow-2" disabled></button><button class="card" id="pow-3" disabled></button><button class="card" id="pow-4" disabled></button></div></div>
+      <div class="grp guns"><h4>Forces<span class="nx" id="next-g"></span></h4><div class="slots"><button class="card gun" id="pow-0" disabled></button><button class="card gun" id="pow-1" disabled></button></div></div>
+      <div class="grp fx"><h4>Effects<span class="nx" id="next-f"></span></h4><div class="slots"><button class="card" id="pow-2" disabled></button><button class="card" id="pow-3" disabled></button><button class="card" id="pow-4" disabled></button></div></div>
     </div>
     <p class="hint" id="hint"></p>
     <p class="sr" id="sr" aria-live="polite"></p>
@@ -255,19 +297,20 @@ const $ = id => document.getElementById(id);
 const COLS = 22, ROWS = 36, N = COLS*ROWS;
 /* Pace: a 2:30 match, shots and movement at 55% of their raw speed, and double energy for the last 45 seconds. */
 const TIME = 150, PACE = .55, SURGE = 45;
-/* Cannons: gap = seconds between shots, hp = hits it survives */
+/* Cannons: gap = seconds between shots, hp = hits it survives, p = extra tiles each shot goes through.
+   Shots are few and weighty: most flip two tiles each, which halves the clutter for the same output. */
 const UNITS = {
-  sentry:  { gap:.16, hp:16, speed:22 },
-  sweeper: { gap:.09, hp:8,  speed:20 },
-  scatter: { gap:.7,  hp:9,  speed:18 },
-  bouncer: { gap:.13, hp:8,  speed:20 },
+  sentry:  { gap:.32, hp:16, speed:22, p:1 },
+  sweeper: { gap:.18, hp:8,  speed:20, p:1 },
+  scatter: { gap:1.1, hp:9,  speed:18, p:1 },
+  bouncer: { gap:.26, hp:8,  speed:20, p:1 },
   pike:    { gap:1.6, hp:8 },
-  bastion: { gap:.4,  hp:36, speed:20 },
-  twin:    { gap:.2,  hp:18, speed:22 },
+  bastion: { gap:.7,  hp:36, speed:20, p:1 },
+  twin:    { gap:.4,  hp:18, speed:22, p:1 },
   mortar:  { gap:1.3, hp:8 },
-  rattler: { gap:.06, hp:6,  speed:24 },
+  rattler: { gap:.11, hp:6,  speed:24 },
   flak:    { gap:.14, hp:12 },
-  spinner: { gap:.07, hp:10, speed:18 },
+  spinner: { gap:.14, hp:10, speed:18, p:1 },
   mender:  { gap:.8,  hp:10 },
   hunter:  { gap:1,   hp:10, speed:22 },
   rail:    { gap:2.6, hp:8 }
@@ -327,7 +370,7 @@ const CARDS = {
   shield:   { name:'Shield',    cost:3, unlock:3, kind:'Guard',  aim:'none', desc:'Your tiles and cannons shrug off hits for 3s' },
   crossfire:{ name:'Crossfire', cost:5, unlock:3, kind:'Strike', aim:'any',  desc:'Flip a band across the whole width' },
   sabotage: { name:'Sabotage',  cost:3, unlock:3, kind:'Trick',  aim:'any',  r:6, desc:'Deal 10 damage to the nearest rival cannon' },
-  spark:    { name:'Spark',     cost:0, unlock:3, kind:'Boost',  aim:'none', desc:'Gain 3 energy right now' },
+  spark:    { name:'Spark',     cost:0, unlock:3, kind:'Boost',  aim:'none', desc:'Gain 2 energy right now' },
   minefield:{ name:'Minefield', cost:3, unlock:4, kind:'Guard',  aim:'any',  r:5, desc:'Mine your tiles; they blast back' },
   tide:     { name:'Tide',      cost:6, unlock:4, kind:'Strike', aim:'none', desc:'Push your whole front 2 tiles' },
   frost:    { name:'Frost',     cost:2, unlock:4, kind:'Trick',  aim:'any',  r:5, desc:'Freeze rival cannons near the aim point' },
@@ -404,11 +447,11 @@ const ic = id => `<span class="ic ${lookOf(id) || 'k-' + CARDS[id].kind}">${svg(
 const KINDS = ['All', 'Strike', 'Guard', 'Boost', 'Trick'], FKINDS = ['All', 'Cannon', 'Troop', 'Dragon'];
 /* Rivals rotate by stage. depth = how many rows behind its front it likes to build. */
 const RIVALS = [
-  { name:'Swarm',    line:'Floods the field with cheap, fast cannons.', depth:[2, 6], cards:['sentry','sweeper','scatter','rattler','twin','spinner','runner','squad','overdrive','spark','barrage','capacitor'], tune:.8 },
+  { name:'Swarm',    line:'Floods the field with cheap, fast cannons.', depth:[2, 6], cards:['sentry','sweeper','scatter','rattler','twin','spinner','runner','squad','overdrive','spark','barrage','capacitor'], tune:.72 },
   { name:'Needle',   line:'Pushes narrow and deep with beams and strips.', depth:[1, 4], cards:['pike','sentry','bouncer','rail','drake','trench','wedge','crossfire','heavy','broadhead'], tune:1.15 },
   { name:'Brick',    line:'Digs in behind tough cannons, plating and mines.', depth:[5, 10], cards:['bastion','sentry','twin','flak','mender','brute','plating','barricade','minefield','shield','refit'], tune:1.1 },
   { name:'Storm',    line:'Shells you from range and hits wide areas.', depth:[4, 9], cards:['mortar','sweeper','scatter','drake','elder','splash','tide','wildfire','meteor','beachhead','overdrive'], tune:1.1 },
-  { name:'Saboteur', line:'Freezes, wrecks and steals your cannons.', depth:[3, 7], cards:['sentry','sweeper','hunter','sapper','wyrm','sabotage','frost','jam','hijack','corrode','lockdown','stasis','trench'], tune:.8 }
+  { name:'Saboteur', line:'Freezes, wrecks and steals your cannons.', depth:[3, 7], cards:['sentry','sweeper','hunter','sapper','wyrm','sabotage','frost','jam','hijack','corrode','lockdown','stasis','trench'], tune:.78 }
 ];
 const rivalFor = n => RIVALS[(n - 1) % RIVALS.length];
 const UPG = {
@@ -416,7 +459,7 @@ const UPG = {
   dynamo: { name:'Dynamo',       max:6, desc:'+10% energy flow per rank' },
   van:    { name:'Vanguard',     max:3, desc:'Start two rows further up per rank' }
 };
-const NG = 5, NF = 6, HG = 2, HF = 3, HAND = HG + HF, MAXE = 10, MAXRANK = 9, MAXUNITS = 8, DONE = 5;
+const NG = 5, NF = 6, HG = 2, HF = 3, HAND = HG + HF, MAXE = 10, MAXRANK = 9, MAXUNITS = 6, DONE = 5;
 const cost = (k, r) => Math.round(40*(r + 1)*Math.pow(1.45, r));
 const rcost = r => 10 + 6*r*r;   // coins to go from level r+1 to r+2
 const lvPow = r => 1 + .1*r;        // every level adds 10%
@@ -448,7 +491,7 @@ function stat(id, r){
     case 'jam': return sec(4);
     case 'barricade': return sec(10);
     case 'hijack': return 'health ×' + f1(pw);
-    case 'spark': return '+' + f1(3*pw) + ' energy';
+    case 'spark': return '+' + f1(2*pw) + ' energy';
     case 'beachhead': return 'Sentry with ' + R(6) + ' health';
   }
   return '';
@@ -532,12 +575,12 @@ function newMatch(idle){
   let foe = who.cards.filter(k => CARDS[k].unlock <= n + 1);
   if (!foe.some(k => UNITS[k])) foe.push('sentry');
   foe = foe.concat(foe.filter(k => UNITS[k]), n < 3 ? ['sentry', 'sentry'] : []);
-  M = { boss, who, share:.5, coach:!idle && !P.tut && n === 1 ? 0 : DONE, coachT:0, shake:0, floats:[], gunsLost:0, gunsKilled:0, played:0, srT:0, tw:new Int8Array(N).fill(-1), idle:!!idle, over:false, t:TIME, sel:-1, cur:{ x:COLS/2, y:ROWS - 8 },
+  M = { boss, who, share:.5, coach:!idle && !P.tut && n === 1 ? 0 : DONE, coachT:0, shake:0, floats:[], parts:[], noteAge:0, gunsLost:0, gunsKilled:0, played:0, srT:0, tw:new Int8Array(N).fill(-1), idle:!!idle, over:false, t:TIME, sel:-1, cur:{ x:COLS/2, y:ROWS - 8 },
     owner, hp, mine, flash, lost:[[], []], note:null, bullets:[], units:[], beams:[], shells:[], puffs:[], temps:[], last:[null, null],
     gq:shuffle(P.guns), fq:shuffle(P.fx), foe, foeNext:foe.find(k => UNITS[k]), handKey:'',
     sides:[
-      { rate:1 + .07*P.up.rapid, flow:.42*(1 + .1*P.up.dynamo), energy:5, over:0, frozen:0, shield:0, cap:0, heavy:0, wide:0, lock:0 },
-      { rate:Math.min(1.15, .65 + .04*n), flow:Math.min(.36, .2 + .016*n)*who.tune, energy:2, over:0, frozen:0, shield:0, cap:0, heavy:0, wide:0, lock:0 }
+      { rate:1 + .07*P.up.rapid, flow:.33*(1 + .1*P.up.dynamo), energy:5, over:0, frozen:0, shield:0, cap:0, heavy:0, wide:0, lock:0 },
+      { rate:Math.min(1.15, .8 + .035*n), flow:Math.min(.44, .25 + .012*n)*who.tune, energy:3, over:0, frozen:0, shield:0, cap:0, heavy:0, wide:0, lock:0 }
     ] };
   const put = (side, type, c, back, mul = 1) => addUnit(side, type, c + .5, base(side) + fwd(side)*back + .5, mul);
   if (idle){ for (const side of [0, 1]){ put(side, 'sweeper', 5, 5, 50); put(side, 'sentry', 11, 3, 50); put(side, 'sweeper', 16, 5, 50); } }
@@ -553,7 +596,8 @@ function addUnit(side, type, x, y, pw = 1, hpSet){
 function kill(u, quiet){
   const at = M.units.indexOf(u); if (at < 0) return;
   M.units.splice(at, 1); M.puffs.push({ x:u.x, y:u.y, t:.4, side:u.side });
-  if (!quiet){ boom(.1, .3); if (UNITS[u.type]){ shake(.2); if (u.side === 0) M.gunsLost++; else M.gunsKilled++; } }
+  if (!quiet){ for (let q = 0; q < 12; q++){ const a = Math.random()*6.283, v = 4 + Math.random()*9; M.parts.push({ x:u.x, y:u.y, vx:Math.cos(a)*v, vy:Math.sin(a)*v, t:.5, side:u.side }); }
+    boom(.1, .3); if (UNITS[u.type]){ shake(.2); if (u.side === 0) M.gunsLost++; else M.gunsKilled++; } }
 }
 const unitAt = i => M.units.find(u => !u.fly && Math.floor(u.y)*COLS + Math.floor(u.x) === i);
 function hurt(u, dmg, by){
@@ -584,8 +628,9 @@ function blast(side, c, r, rad, dmg = 1){
     if (dc*dc + dr*dr <= rad*rad + 1 && inb(c + dc, r + dr)) strike((r + dr)*COLS + c + dc, side, dmg);
 }
 function frontRow(side, c){ for (let k = 0; k < ROWS; k++){ const r = base(side) + fwd(side)*k; if (M.owner[r*COLS + c] === 1 - side) return r; } return -1; }
+let shotP = 0;   // extra pierce of the cannon that is firing right now
 function bullet(side, x, y, ang, speed, pierce = 0, ttl = 9){
-  M.bullets.push({ side, x, y, ttl, vx:Math.sin(ang)*speed, vy:fwd(side)*Math.cos(ang)*speed, pierce:pierce + (M.sides[side].heavy > 0 ? 1 : 0) });
+  M.bullets.push({ side, x, y, ttl, vx:Math.sin(ang)*speed, vy:fwd(side)*Math.cos(ang)*speed, pierce:pierce + shotP + (M.sides[side].heavy > 0 ? 1 : 0) });
 }
 function nearestUnit(side, x, y, rad){
   let best = null, bd = rad*rad;
@@ -606,6 +651,7 @@ function beamUp(u, reach, dmg){
 }
 function fireUnit(u){
   const U = UNITS[u.type], f = fwd(u.side), k = u.type;
+  shotP = U.p || 0;
   if (k === 'pike') beamUp(u, 12, 2);
   else if (k === 'rail') beamUp(u, 30, 3);
   else if (k === 'mortar') M.shells.push({ side:u.side, x0:u.x, y0:u.y, x1:clamp(u.x + (Math.random()*6 - 3), .5, COLS - .5), y1:clamp(u.y + f*(9 + Math.random()*7), .5, ROWS - .5), t:0, dur:.75 });
@@ -626,6 +672,7 @@ function fireUnit(u){
     else if (!v) bullet(u.side, u.x, u.y, 0, U.speed);
   }
   else bullet(u.side, u.x, u.y, u.ang, U.speed);
+  shotP = 0;
 }
 
 /* Troops and dragons move on their own each frame. */
@@ -714,7 +761,7 @@ function cast(side, id, x, y){
   else if (id === 'capacitor') S.cap = 8*pw;
   else if (id === 'heavy') S.heavy = 6*pw;
   else if (id === 'broadhead') S.wide = 8*pw;
-  else if (id === 'spark') S.energy = Math.min(MAXE, S.energy + 3*pw);
+  else if (id === 'spark') S.energy = Math.min(MAXE, S.energy + 2*pw);
   else if (id === 'refit'){ for (const u of M.units) if (u.side === side){ u.hp = u.max; M.puffs.push({ x:u.x, y:u.y, t:.3, side }); } }
   else if (id === 'jam') O.frozen = 4*pw;
   else if (id === 'lockdown') O.lock = 6*pw;
@@ -759,7 +806,15 @@ function share(){ let a = 0, b = 0; for (let i = 0; i < N; i++){ if (M.owner[i] 
 function rival(){
   const R = M.sides[1], id = M.foeNext, C = CARDS[id];
   if (R.frozen > 0 || R.lock > 0 || R.energy < C.cost) return;
-  const again = () => { M.foeNext = M.foe[Math.floor(Math.random()*M.foe.length)]; };
+  const again = () => {   // half the time the rival answers what you have on the field
+    const pool = M.foe; let pick = null;
+    if (Math.random() < .5){
+      const fly = M.units.some(u => u.side === 0 && u.fly), troops = M.units.filter(u => u.side === 0 && MOB[u.type] && !u.fly).length, own = gunsOf(1).length, yours = gunsOf(0).length;
+      const want = fly ? ['flak', 'hunter', 'frost', 'sabotage'] : troops >= 2 ? ['spinner', 'scatter', 'splash', 'minefield', 'barricade', 'crossfire'] : own < 2 ? pool.filter(k => UNITS[k]) : yours >= own + 2 ? ['sabotage', 'hunter', 'sapper', 'frost', 'jam', 'meteor', 'splash'] : [];
+      const ok = want.filter(k => pool.includes(k)); if (ok.length) pick = ok[Math.floor(Math.random()*ok.length)];
+    }
+    M.foeNext = pick || pool[Math.floor(Math.random()*pool.length)];
+  };
   const theirs = gunsOf(1);
   if (UNITS[id] && theirs.length >= MAXUNITS && theirs.every(u => u.hp/u.max > .5)){ again(); return; }
   if (MOB[id] && M.units.filter(u => u.side === 1 && MOB[u.type]).length >= 5){ again(); return; }
@@ -790,6 +845,8 @@ function step(dt){
     else { M.coachT -= dt; if (M.coachT <= 0){ M.coach++; M.coachT = 6; if (M.coach === DONE){ P.tut = true; store.set(P); M.note = { text:'You have it', side:0, t:1.6 }; } } }
   }
   if (M.shake > 0) M.shake -= dt;
+  if (M.note !== M.noteRef){ M.noteRef = M.note; M.noteAge = 0; } M.noteAge += dt;
+  for (let k = M.parts.length - 1; k >= 0; k--){ const q = M.parts[k]; q.t -= dt; q.x += q.vx*dt; q.y += q.vy*dt; q.vx *= .92; q.vy *= .92; if (q.t <= 0) M.parts.splice(k, 1); }
   for (let k = M.floats.length - 1; k >= 0; k--){ M.floats[k].t -= dt; if (M.floats[k].t <= 0) M.floats.splice(k, 1); }
   if (!M.idle && M.coach >= 2){ M.t -= dt; rival(); }
   if (!M.idle && !M.surged && M.t <= SURGE){ M.surged = true; M.note = { text:'Surge: double energy', side:0, t:2.2 }; tone(523, .15, 'triangle', .05); tone(784, .2, 'triangle', .05, .1); }
@@ -825,7 +882,7 @@ function step(dt){
     if (o !== 2 && strike(i, b.side)){
       // a shot that takes ground within 3 tiles of a rival cannon also chips that cannon
       const v = M.units.find(u => u.side !== b.side && UNITS[u.type] && (u.x - b.x)**2 + (u.y - b.y)**2 <= 9);
-      if (v && M.sides[v.side].shield <= 0){ const g = M.units.find(q => q.side === v.side && q.type === 'bastion' && (q.x - v.x)**2 + (q.y - v.y)**2 <= 16); hurt(g || v, 1, b.side); }   // a Bastion within 4 tiles takes the chip instead
+      if (v && !b.chip && M.sides[v.side].shield <= 0){ b.chip = true; const g = M.units.find(q => q.side === v.side && q.type === 'bastion' && (q.x - v.x)**2 + (q.y - v.y)**2 <= 16); hurt(g || v, 1, b.side); }   // a Bastion within 4 tiles takes the chip instead
       if (M.sides[b.side].wide > 0){ if (c > 0) strike(i - 1, b.side); if (c < COLS - 1) strike(i + 1, b.side); }
       dead = --b.pierce < 0;
     }
@@ -839,7 +896,11 @@ function step(dt){
   for (const list of [M.beams, M.puffs]) for (let k = list.length - 1; k >= 0; k--){ list[k].t -= dt; if (list[k].t <= 0) list.splice(k, 1); }
   if (M.note && M.note.t > 0) M.note.t -= dt;
   for (let i = 0; i < N; i++) if (M.flash[i] > 0) M.flash[i] = Math.max(0, M.flash[i] - 4*dt);
-  if (!M.idle){ const s = share(); M.share = s; if (M.t <= 0 || s >= .88 || s <= .12) finish(s); }
+  if (!M.idle){
+    const s = share(); M.share = s;
+    if (M.t <= 0 && !M.ot && Math.abs(s - .5) < .02){ M.ot = true; M.t = 20; M.note = { text:'Overtime', side:0, t:2 }; tone(659, .2, 'triangle', .06); }   // too close to call: 20 more seconds
+    else if (M.t <= 0 || s >= .88 || s <= .12) finish(s);
+  }
 }
 function finish(s){
   M.over = true; M.sel = -1; clearMatch();
@@ -852,7 +913,7 @@ function finish(s){
   if (hitGoal) P.goals[P.level] = true;
   const paid = (fresh ? earned : Math.round(earned/2)) + bonus;
   P.coins += paid; P.stars[P.level] = Math.max(P.stars[P.level] || 0, stars);
-  $('over-stars').textContent = '★'.repeat(stars) + '☆'.repeat(3 - stars);
+  $('over-stars').innerHTML = [0, 1, 2].map(q => `<span${q < stars ? '' : ' class="off"'}>${q < stars ? '★' : '☆'}</span>`).join('');
   $('over-title').textContent = won ? (s >= .88 ? 'Clean sweep' : 'Stage cleared') : s === .5 ? 'Dead heat' : 'Line lost';
   const base = fresh ? earned : Math.round(earned/2), streakPay = won ? Math.min(25, 5*(P.streak - 1)) : 0;
   $('over-sub').textContent = `You held ${pct}% of the field.` + (won ? '' : ' Spend your coins on card levels and try again.');
@@ -941,6 +1002,9 @@ function draw(){
     for (let i = 0; i < N; i++) if (M.owner[i] === 1){ ctx.moveTo(X(i), Y(i) + t); ctx.lineTo(X(i) + t, Y(i)); }
     ctx.stroke(); ctx.globalAlpha = 1;
   }
+  // soft shading so the field reads as one lit surface
+  const gr = ctx.createLinearGradient(0, gy, 0, gy + H); gr.addColorStop(0, 'rgba(0,0,0,.2)'); gr.addColorStop(.45, 'rgba(0,0,0,0)'); gr.addColorStop(1, 'rgba(255,255,255,.07)');
+  ctx.fillStyle = gr; ctx.fillRect(gx, gy, W, H);
   // faint grid
   ctx.strokeStyle = bg; ctx.globalAlpha = .16; ctx.lineWidth = 1; ctx.beginPath();
   for (let c = 1; c < COLS; c++){ ctx.moveTo(gx + c*t, gy); ctx.lineTo(gx + c*t, gy + H); }
@@ -957,13 +1021,14 @@ function draw(){
   for (let i = 0; i < N; i++) if (M.flash[i] > 0){ ctx.globalAlpha = M.flash[i]*.42; ctx.fillRect(X(i), Y(i), t, t); }
   ctx.globalAlpha = 1;
   // the front line between the two sides
+  ctx.shadowColor = fg; ctx.shadowBlur = 7;
   ctx.strokeStyle = fg; ctx.lineWidth = Math.max(1.5, t*.16); ctx.lineCap = 'round'; ctx.beginPath();
   for (let i = 0; i < N; i++){
     const o = M.owner[i]; if (o > 1) continue;
     if (i % COLS < COLS - 1 && M.owner[i + 1] === 1 - o){ ctx.moveTo(X(i) + t, Y(i)); ctx.lineTo(X(i) + t, Y(i) + t); }
     if (i + COLS < N && M.owner[i + COLS] === 1 - o){ ctx.moveTo(X(i), Y(i) + t); ctx.lineTo(X(i) + t, Y(i) + t); }
   }
-  ctx.stroke();
+  ctx.stroke(); ctx.shadowBlur = 0;
   for (const side of [0, 1]) if (M.sides[side].shield > 0){ ctx.fillStyle = ice; ctx.globalAlpha = .22; ctx.beginPath(); for (let i = 0; i < N; i++) if (M.owner[i] === side) ctx.rect(X(i), Y(i), t, t); ctx.fill(); ctx.globalAlpha = 1; }
   for (const b of M.beams){
     const a = clamp(b.t/.28, 0, 1); ctx.globalAlpha = a; ctx.lineCap = 'round';
@@ -971,7 +1036,12 @@ function draw(){
     ctx.strokeStyle = '#fff'; ctx.lineWidth = t*b.w*.3; ctx.stroke(); ctx.globalAlpha = 1;
   }
   ctx.lineWidth = Math.max(1, t*.12);
-  for (const b of M.bullets){ ctx.beginPath(); ctx.arc(gx + b.x*t, gy + b.y*t, Math.max(2, t*.27), 0, 7); ctx.fillStyle = col[b.side]; ctx.fill(); ctx.strokeStyle = fg; ctx.stroke(); }
+  ctx.lineCap = 'round';
+  for (const b of M.bullets){   // each shot drags a short trail
+    const x = gx + b.x*t, y = gy + b.y*t, q = .045*t;
+    ctx.strokeStyle = fg; ctx.globalAlpha = .45; ctx.lineWidth = Math.max(2, t*.3); ctx.beginPath(); ctx.moveTo(x - b.vx*q, y - b.vy*q); ctx.lineTo(x, y); ctx.stroke(); ctx.globalAlpha = 1;
+    ctx.beginPath(); ctx.arc(x, y, Math.max(2.5, t*.36), 0, 7); ctx.fillStyle = col[b.side]; ctx.fill(); ctx.lineWidth = Math.max(1, t*.12); ctx.stroke();
+  }
   for (const u of M.units) if (!MOB[u.type]) drawUnit(u, col[u.side], fg, bg, ice, line);
   for (const u of M.units) if (MOB[u.type] && !u.fly) drawMob(u, col[u.side], fg, bg, ice);
   for (const u of M.units) if (u.fly) drawMob(u, col[u.side], fg, bg, ice);
@@ -986,6 +1056,8 @@ function draw(){
     ctx.beginPath(); ctx.arc(x, y, t*(.4 + .5*Math.sin(Math.PI*p)), 0, 7); ctx.fillStyle = col[q.side]; ctx.fill(); ctx.strokeStyle = fg; ctx.stroke();
   }
   for (const q of M.puffs){ ctx.globalAlpha = clamp(q.t/.4, 0, 1); ctx.strokeStyle = fg; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(gx + q.x*t, gy + q.y*t, Math.max(.1, t*(2.4 - 3*q.t)), 0, 7); ctx.stroke(); ctx.globalAlpha = 1; }
+  for (const q of M.parts){ ctx.globalAlpha = clamp(q.t*2.4, 0, 1); ctx.fillStyle = col[q.side]; ctx.fillRect(gx + q.x*t - t*.2, gy + q.y*t - t*.2, t*.4, t*.4); }
+  ctx.globalAlpha = 1;
   if (M.sel >= 0 && !M.over){
     const id = slot(M.sel), C = CARDS[id], c = Math.floor(M.cur.x), r = Math.floor(M.cur.y), bad = !!valid(0, id, M.cur.x, M.cur.y);
     ctx.strokeStyle = fg; ctx.lineWidth = 2; ctx.setLineDash(bad ? [4, 4] : []); ctx.fillStyle = fg; ctx.globalAlpha = bad ? .6 : 1;
@@ -1005,7 +1077,7 @@ function draw(){
   }
   ctx.restore();
   if (M.note && M.note.t > 0){
-    const y = gy + (M.note.side ? 5 : ROWS - 5)*t, size = Math.round(Math.min(26, t*1.9));
+    const y = gy + (M.note.side ? 5 : ROWS - 5)*t, size = Math.round(Math.min(26, t*1.9)*(1 + .45*Math.max(0, 1 - (M.noteAge || 1)/.14)));
     ctx.globalAlpha = Math.min(1, M.note.t*2); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.font = `${size}px "Lilita One", "Arial Black", sans-serif`;
     ctx.lineWidth = Math.max(3, size*.18); ctx.lineJoin = 'round'; ctx.strokeStyle = bg; ctx.strokeText(M.note.text, gx + W/2, y);
@@ -1024,17 +1096,20 @@ function hud(){
   const key = M.gq.slice(0, HG).join() + '|' + M.fq.slice(0, HF + 1).join() + M.sel + M.idle + M.coach + gunsOf(0).length;
   if (key !== M.handKey){
     M.handKey = key;
-    for (let k = 0; k < HAND; k++){ const id = slot(k), c = CARDS[id]; $('pow-' + k).className = 'card ' + lookOf(id); $('pow-' + k).innerHTML = c ? `${ic(id)}<u>L${(P.rank[id] || 0) + 1}</u><i class="cost">${c.cost}</i><b>${c.name}</b><small>${ROLE[id] || c.kind}</small><span class="meter"><span></span></span>` : ''; $('pow-' + k).setAttribute('aria-label', c ? `${c.name}, ${c.cost} energy. ${c.desc}` : 'Empty'); }
+    for (let k = 0; k < HAND; k++){ const id = slot(k), c = CARDS[id]; { const b = $('pow-' + k), keep = b.classList.contains('ready') ? ' ready' : ''; M.shown = M.shown || []; b.className = 'card ' + lookOf(id) + keep; if (M.shown[k] !== id){ M.shown[k] = id; void b.offsetWidth; b.classList.add('in'); } } $('pow-' + k).innerHTML = c ? `${ic(id)}<u>L${(P.rank[id] || 0) + 1}</u><i class="cost">${c.cost}</i><b>${c.name}</b><small>${ROLE[id] || c.kind}</small><span class="meter"><span></span></span>` : ''; $('pow-' + k).setAttribute('aria-label', c ? `${c.name}, ${c.cost} energy. ${c.desc}` : 'Empty'); }
     const sel = CARDS[slot(M.sel)], next = CARDS[M.fq[HF]];
     const coach = ['Step 1 of 5: tap a card on the left. Those are your forces.', 'Step 2 of 5: press on your own ground, drag to aim, let go to place it.', 'Step 3 of 5: now play an effect card from the right.', 'Step 4 of 5: the ring round a cannon is its health. Shots landing near it wear it down.', 'Step 5 of 5: the gold bar is energy. Fall behind and it fills faster.'][M.coach];
     $('foe-name').textContent = M.who.name;
+    $('next-g').innerHTML = M.idle || !M.gq[HG] ? '' : 'Next' + ic(M.gq[HG]); $('next-f').innerHTML = M.idle || !M.fq[HF] ? '' : 'Next' + ic(M.fq[HF]);
     $('hint').classList.toggle('coach', !!coach && !M.idle);
-    $('hint').textContent = M.idle ? '' : coach ? coach : sel ? `${sel.name}: ${sel.desc}. ` + (sel.aim === 'own' ? 'Press on your own ground, drag, let go.' : 'Press on the board, drag, let go.') : `Pick a card, or hold one to read it. Cannons ${gunsOf(0).length}/${MAXUNITS}.` + (next ? ' Next effect: ' + next.name + '.' : '');
+    $('hint').textContent = M.idle ? '' : coach ? coach : sel ? `${sel.name}: ${sel.desc}. ` + (sel.aim === 'own' ? 'Press on your own ground, drag, let go.' : 'Press on the board, drag, let go.') : `Cannons ${gunsOf(0).length}/${MAXUNITS}. Hold a card to read it.`;
   }
   for (let k = 0; k < HAND; k++){
     const c = CARDS[slot(k)], b = $('pow-' + k), can = c && !M.idle && !M.over && A.lock <= 0 && A.energy >= c.cost;
     b.disabled = !c || M.idle || M.over;
+    const was = b.classList.contains('ready');
     b.classList.toggle('ready', !!can); b.classList.toggle('sel', M.sel === k);
+    if (can && !was){ b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop'); }
     const m = b.querySelector('.meter span'); if (m && c) m.style.width = (c.cost ? clamp(A.energy/c.cost, 0, 1)*100 : 100) + '%';
   }
 }
@@ -1088,7 +1163,7 @@ function pause(on){
 document.addEventListener('visibilitychange', () => { if (document.hidden) pause(true); });
 
 /* ---------- saving a match in progress ---------- */
-const MKEY = 'flipfire.match4';
+const MKEY = 'flipfire.match5';
 function saveMatch(){
   if (!live() || M.coach < DONE) return;
   try { localStorage.setItem(MKEY, JSON.stringify({ ...M, level:P.level, owner:Array.from(M.owner), hp:Array.from(M.hp), mine:Array.from(M.mine), tw:Array.from(M.tw), flash:0 })); } catch {}
