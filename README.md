@@ -18,5 +18,6 @@ An original real-time tile battle in `flipfire.html`; open it in a browser to pl
 - Strike cards land where you tap; boosts and tricks play the moment you tap the card.
 - Build an 8-card deck from 36 cards, each with its own icon. Energy fills over time; you hold four cards at once.
 - Scrap earned each stage buys workshop upgrades and raises individual cards up to rank 4.
-- Later stages add plated tiles and walls. Every fifth stage is a boss stage.
+- Five named rivals rotate by stage, each with its own deck and habits. Later stages add plated tiles and walls; every fifth stage is a boss stage.
+- Press, drag and release to aim. Cleared stages can be replayed, an unfinished match resumes after a reload, and there is an option to stripe the rival's tiles.
 - Hold more of the field after 75 seconds to win.

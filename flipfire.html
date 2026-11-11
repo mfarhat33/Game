@@ -100,10 +100,16 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
 .strip{display:grid;grid-template-columns:repeat(8,1fr);gap:4px}
 .strip .ic{width:100%;height:34px}
 .strip .gap{height:34px;border:1px dashed var(--line);border-radius:9px}
-.chips{display:flex;gap:4px;flex-wrap:wrap}
-.chipb{border:1px solid var(--line);background:none;border-radius:999px;padding:4px 10px;font-weight:800;font-size:12.5px}
+.chips{display:grid;grid-template-columns:repeat(6,1fr);gap:4px}
+.chipb{border:1px solid var(--line);background:none;border-radius:999px;padding:5px 0;font-weight:800;font-size:12px;min-width:0}
 .chipb.on{background:var(--fg);color:var(--bg);border-color:var(--fg)}
 .opt.cardbtn{padding:7px 9px;gap:9px}
+.hint.coach{color:var(--fg);font-size:14px;font-weight:800}
+.stagepick{display:flex;align-items:center;gap:8px}
+.stagepick h2{flex:1}
+.stagepick button{flex:none;width:38px;height:38px;border-radius:12px;border:1px solid var(--line);background:none;font-weight:800;font-size:18px}
+.stagepick button:disabled{opacity:.35;cursor:default}
+.opt small.st{color:var(--fg);opacity:.8;font-weight:700}
 </style>
 
 <div class="app">
@@ -136,7 +142,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
 
 <div class="veil" id="dlg-home">
   <div class="sheet home">
-    <h2 id="home-title">Stage 1</h2>
+    <div class="stagepick"><button id="st-prev" aria-label="Previous stage">‹</button><h2 id="home-title">Stage 1</h2><button id="st-next" aria-label="Next stage">›</button></div>
     <div class="tabs" id="tabs">
       <button class="tab" data-tab="battle">Battle</button>
       <button class="tab" data-tab="deck">Deck</button>
@@ -151,7 +157,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
       <p id="home-next"></p>
     </div>
     <div class="pane" id="tab-deck" hidden><h3 id="deck-head">Deck</h3><div class="strip" id="strip"></div><div class="chips" id="kinds"></div><div class="list" id="cards"></div></div>
-    <div class="pane" id="tab-workshop" hidden><p>Scrap also raises card ranks in the Deck tab.</p><div class="list" id="upgrades"></div></div>
+    <div class="pane" id="tab-workshop" hidden><p>Scrap also raises card ranks in the Deck tab.</p><div class="list" id="upgrades"></div><h3>Settings</h3><div class="list" id="settings"></div></div>
     <div class="row">
       <button class="btn" id="btn-sound">Sound on</button>
       <button class="btn go" id="btn-play">Play</button>
@@ -173,7 +179,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
 <div class="veil" id="dlg-pause" hidden>
   <div class="sheet">
     <h2>Paused</h2>
-    <p>Pick a card, then tap the board where you want it. On a keyboard: 1 to 4 pick a card, the arrow keys move the target, Enter plays it.</p>
+    <p>Pick a card, press on the board, drag to aim and let go to play it. Let go off the board to cancel. On a keyboard: 1 to 4 pick a card, the arrow keys move the target, Enter plays it.</p>
     <div class="row">
       <button class="btn" id="pause-quit">Quit stage</button>
       <button class="btn go" id="pause-resume">Resume</button>
@@ -224,14 +230,14 @@ const CARDS = {
   refit:    { name:'Refit',     cost:2, unlock:9, kind:'Boost',  aim:'none', desc:'Your turrets are good as new' },
   reclaim:  { name:'Reclaim',   cost:5, unlock:10, kind:'Guard', aim:'none', desc:'Take back the last 30 tiles lost' },
   hijack:   { name:'Hijack',    cost:6, unlock:10, kind:'Trick', aim:'any',  r:6, desc:'Nearest rival turret joins you' },
-  barricade:{ name:'Barricade', cost:3, unlock:2, kind:'Guard',  aim:'own',  desc:'Wall 5 wide that stops shots, 10s' },
+  barricade:{ name:'Barricade', cost:3, unlock:2, kind:'Guard',  aim:'own',  desc:'Wall 5 wide that stops rival shots' },
   spark:    { name:'Spark',     cost:0, unlock:3, kind:'Boost',  aim:'none', desc:'Gain 3 energy right now' },
   twin:     { name:'Twin',      cost:5, unlock:4, kind:'Build',  aim:'own',  r:1, desc:'Turret with two barrels side by side' },
   frost:    { name:'Frost',     cost:2, unlock:4, kind:'Trick',  aim:'any',  r:5, desc:'Freeze rival turrets near the tap, 6s' },
-  corrode:  { name:'Corrode',   cost:2, unlock:5, kind:'Trick',  aim:'none', desc:'Strip all rival plating and mines' },
+  corrode:  { name:'Corrode',   cost:2, unlock:5, kind:'Trick',  aim:'none', desc:'Strip all rival plating and mines', norank:true },
   wedge:    { name:'Wedge',     cost:4, unlock:6, kind:'Strike', aim:'any',  desc:'Flip a widening wedge ahead' },
   flak:     { name:'Flak',      cost:4, unlock:6, kind:'Build',  aim:'own',  r:5, desc:'Turret that shoots down rival shots' },
-  echo:     { name:'Echo',      cost:3, unlock:7, kind:'Boost',  aim:'none', desc:'Repeat your last strike or boost' },
+  echo:     { name:'Echo',      cost:3, unlock:7, kind:'Boost',  aim:'none', desc:'Repeat your last strike or boost', norank:true },
   beachhead:{ name:'Beachhead', cost:5, unlock:8, kind:'Strike', aim:'any',  r:2, desc:'Flip a patch and drop a Sentry in it' }
 };
 const ICON = {
@@ -274,6 +280,47 @@ const ICON = {
 };
 const ic = id => `<span class="ic k-${CARDS[id].kind}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[id] || ''}</svg></span>`;
 const KINDS = ['All', 'Build', 'Strike', 'Guard', 'Boost', 'Trick'];
+/* Rivals rotate by stage. depth = how many rows behind its front it likes to build. */
+const RIVALS = [
+  { name:'Swarm',    line:'floods the field with cheap, fast turrets.', depth:[2, 6], cards:['sentry','sweeper','twin','spinner','overdrive','spark','barrage','capacitor'] },
+  { name:'Needle',   line:'pushes narrow and deep with beams and strips.', depth:[1, 4], cards:['pike','sentry','trench','wedge','crossfire','barrage','heavy','broadhead'] },
+  { name:'Brick',    line:'digs in behind plating, walls and mines.', depth:[5, 10], cards:['sentry','twin','flak','plating','barricade','minefield','shield','splash','refit'] },
+  { name:'Storm',    line:'shells you from range and hits wide areas.', depth:[4, 9], cards:['mortar','sweeper','splash','tide','wildfire','meteor','beachhead','overdrive'] },
+  { name:'Saboteur', line:'freezes, wrecks and steals your turrets.', depth:[3, 7], cards:['sentry','sweeper','sabotage','frost','jam','hijack','corrode','lockdown','stasis','trench'] }
+];
+const rivalFor = n => RIVALS[(n - 1) % RIVALS.length];
+const f1 = v => String(Math.round(v*10)/10);
+/* What a card does at rank index r (0 = rank 1), in a few words. */
+function stat(id, r){
+  const pw = 1 + .25*r, R = v => Math.round(v*pw), sec = v => f1(v*pw) + 's';
+  if (UNITS[id]) return 'lasts ' + sec(UNITS[id].life);
+  switch (id){
+    case 'trench': return R(8) + ' deep';
+    case 'wedge': return R(7) + ' deep';
+    case 'splash': return 'radius ' + (3 + (r >= 2 ? 1 : 0));
+    case 'plating': return 'radius ' + (4 + (r >= 2 ? 1 : 0));
+    case 'barrage': return r ? `pierces ${r} extra` : 'no pierce';
+    case 'turncoat': return r ? `turned shots pierce ${r}` : 'no pierce';
+    case 'stasis': return r ? `plus ${f1(r*.5)}s shield` : 'no shield';
+    case 'crossfire': return (2 + (r >= 2 ? 1 : 0)) + ' rows';
+    case 'tide': return (r >= 2 ? 3 : 2) + ' tiles deep';
+    case 'sabotage': return r >= 2 ? 'plus a blast' : 'turret only';
+    case 'minefield': return R(6) + ' mines';
+    case 'wildfire': return R(20) + ' tiles';
+    case 'meteor': return R(6) + ' blasts';
+    case 'reclaim': return R(30) + ' tiles';
+    case 'overdrive': return sec(5);
+    case 'capacitor': case 'broadhead': return sec(8);
+    case 'shield': return sec(3);
+    case 'heavy': case 'lockdown': case 'frost': return sec(6);
+    case 'jam': return sec(4);
+    case 'barricade': return sec(10);
+    case 'refit': case 'hijack': return 'turret life ×' + f1(pw);
+    case 'spark': return '+' + f1(3*pw) + ' energy';
+    case 'beachhead': return 'Sentry for ' + sec(8);
+  }
+  return '';
+}
 const UPG = {
   rapid:  { name:'Rapid loader', max:8, desc:'+7% turret fire rate per rank' },
   dynamo: { name:'Dynamo',       max:6, desc:'+10% energy flow per rank' },
@@ -289,8 +336,12 @@ const store = {
 };
 const P = store.get({ level:1, coins:0, up:{ rapid:0, dynamo:0, van:0 }, sound:true, deck:[], rank:{} });
 P.rank = P.rank || {};
-P.deck = (P.deck || []).filter(k => CARDS[k] && CARDS[k].unlock <= P.level).slice(0, DECK);
-for (const k of Object.keys(CARDS)) if (P.deck.length < DECK && CARDS[k].unlock <= P.level && !P.deck.includes(k)) P.deck.push(k);
+function tidy(){
+  P.best = Math.max(P.best || 1, P.level); P.level = Math.max(1, Math.min(P.level, P.best));
+  P.deck = (P.deck || []).filter(k => CARDS[k] && CARDS[k].unlock <= P.best).slice(0, DECK);
+  for (const k of Object.keys(CARDS)) if (P.deck.length < DECK && CARDS[k].unlock <= P.best && !P.deck.includes(k)) P.deck.push(k);
+}
+tidy();
 let tab = 'battle', kindF = 'All';
 
 /* ---------- sound ---------- */
@@ -308,7 +359,7 @@ function tone(f, d = .08, type = 'triangle', v = .05, when = 0){
 function tick(side){ const n = performance.now(); if (n - lastTick < 70) return; lastTick = n; tone(side ? 190 : 520 + Math.random()*120, .04, 'square', .016); }
 
 /* ---------- match ---------- */
-let M = null, paused = false;
+let M = null, paused = false, aiming = false;
 const fwd = side => side ? 1 : -1, base = side => side ? 0 : ROWS - 1;
 const inb = (c, r) => c >= 0 && r >= 0 && c < COLS && r < ROWS;
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
@@ -328,17 +379,19 @@ function newMatch(idle){
   while (queue.filter(k => UNITS[k]).length < 3) queue.push('sentry');
   queue.sort(() => Math.random() - .5);
   { const at = queue.findIndex(k => UNITS[k]); if (at > 0) queue.unshift(queue.splice(at, 1)[0]); }
-  const foe = builds.concat(builds, n >= 2 ? ['trench','splash'] : [], n >= 3 ? ['barrage','overdrive'] : [], n >= 4 ? ['crossfire'] : [], n >= 5 ? ['plating'] : [],
-    n >= 6 ? ['tide','sabotage','wedge'] : [], n >= 9 ? ['frost'] : [], n >= 8 ? ['wildfire','minefield'] : [], n >= 10 ? ['meteor','jam'] : []);
-  M = { boss, idle:!!idle, over:false, t:TIME, sel:-1, cur:{ x:COLS/2, y:ROWS - 8 }, owner, hp, mine, flash, lost:[[], []], note:null,
-    bullets:[], units:[], beams:[], shells:[], puffs:[], temps:[], last:[null, null], queue, foe, foeNext:'sentry', handKey:'',
+  const who = rivalFor(n);
+  let foe = who.cards.filter(k => CARDS[k].unlock <= n + 1);
+  if (!foe.some(k => UNITS[k])) foe.push('sentry');
+  foe = foe.concat(foe.filter(k => UNITS[k]), n < 3 ? ['sentry', 'sentry'] : []);
+  M = { boss, who, share:.5, coach:!idle && !P.tut && n === 1 ? 0 : 3, tw:new Int8Array(N).fill(-1), idle:!!idle, over:false, t:TIME, sel:-1, cur:{ x:COLS/2, y:ROWS - 8 }, owner, hp, mine, flash, lost:[[], []], note:null,
+    bullets:[], units:[], beams:[], shells:[], puffs:[], temps:[], last:[null, null], queue, foe, foeNext:foe.find(k => UNITS[k]), handKey:'',
     sides:[
       { rate:1 + .07*P.up.rapid, flow:.8*(1 + .1*P.up.dynamo), energy:5, over:0, frozen:0, shield:0, cap:0, heavy:0, wide:0, lock:0 },
-      { rate:Math.min(1.3, .65 + .05*n), flow:Math.min(.95, .26 + .045*n), energy:2, over:0, frozen:0, shield:0, cap:0, heavy:0, wide:0, lock:0 }
+      { rate:Math.min(1.15, .65 + .04*n), flow:Math.min(.78, .26 + .04*n), energy:2, over:0, frozen:0, shield:0, cap:0, heavy:0, wide:0, lock:0 }
     ] };
   const put = (side, type, c, back, life) => addUnit(side, type, c + .5, base(side) + fwd(side)*back + .5, 1, life);
   if (idle){ for (const side of [0, 1]){ put(side, 'sweeper', 5, 5, 999); put(side, 'sentry', 11, 3, 999); put(side, 'sweeper', 16, 5, 999); } }
-  else { put(0, 'sentry', 11, 4, 18); put(1, 'sentry', 10, 4, 18); if (boss){ put(1, 'sweeper', 5, 6, 40); put(1, 'sweeper', 16, 6, 40); } }
+  else { M.note = { text:'vs ' + who.name, side:1, t:2 }; put(0, 'sentry', 11, 4, 18); put(1, 'sentry', 10, 4, 18); if (boss){ put(1, 'sweeper', 5, 6, 40); put(1, 'sweeper', 16, 6, 40); } }
 }
 function addUnit(side, type, x, y, pw, life){
   const mineU = M.units.filter(u => u.side === side && u.max < 900);
@@ -382,7 +435,7 @@ function fireUnit(u){
     const c = Math.floor(u.x); let r = Math.floor(u.y) + f, left = 10 + (S.heavy > 0 ? 4 : 0), end = r;
     for (; r >= 0 && r < ROWS && left > 0; r += f){
       const i = r*COLS + c, o = M.owner[i]; end = r;
-      if (o === 2) break;
+      if (o === 2){ if (M.tw[i] === u.side) continue; break; }
       if (o === u.side) continue;
       if (!strike(i, u.side)) break;
       if (S.wide > 0){ if (c > 0) strike(i - 1, u.side); if (c < COLS - 1) strike(i + 1, u.side); }
@@ -465,7 +518,7 @@ function cast(side, id, x, y){
     if (u){ u.side = side; u.max = UNITS[u.type].life*pw; u.life = u.max; const i = Math.floor(u.y)*COLS + Math.floor(u.x); if (M.owner[i] !== 2) flip(i, side); blast(side, Math.floor(u.x), Math.floor(u.y), 2); }
   }
   if (id === 'barricade'){
-    for (let dc = -2; dc <= 2; dc++){ const cc = c + dc, i = r*COLS + cc; if (inb(cc, r) && M.owner[i] === side && !M.units.some(u => Math.floor(u.x) === cc && Math.floor(u.y) === r)){ M.owner[i] = 2; M.hp[i] = 0; M.mine[i] = 0; M.temps.push({ i, side, t:10*pw }); } }
+    for (let dc = -2; dc <= 2; dc++){ const cc = c + dc, i = r*COLS + cc; if (inb(cc, r) && M.owner[i] === side && !M.units.some(u => Math.floor(u.x) === cc && Math.floor(u.y) === r)){ M.owner[i] = 2; M.tw[i] = side; M.hp[i] = 0; M.mine[i] = 0; M.temps.push({ i, side, t:10*pw }); } }
   }
   else if (id === 'corrode'){ for (let i = 0; i < N; i++) if (M.owner[i] === 1 - side && (M.hp[i] || M.mine[i])){ M.hp[i] = 0; M.mine[i] = 0; M.flash[i] = .6; } }
   else if (id === 'wedge'){ for (let k = 0; k < R(7); k++){ const h = Math.floor(k*.6); for (let dc = -h; dc <= h; dc++) if (inb(c + dc, r + f*k)) strike((r + f*k)*COLS + c + dc, side); } }
@@ -507,20 +560,28 @@ function rival(){
   if (C.aim === 'own'){
     ok = false;
     for (let tries = 0; tries < 14 && !ok; tries++){
-      x = clamp(best + Math.round(Math.random()*6 - 3), 0, COLS - 1) + .5; y = clamp(fr - 3 - Math.floor(Math.random()*7), 1, ROWS - 2) + .5;
+      x = clamp(best + Math.round(Math.random()*6 - 3), 0, COLS - 1) + .5; y = clamp(fr - M.who.depth[0] - Math.floor(Math.random()*(M.who.depth[1] - M.who.depth[0] + 1)), 1, ROWS - 2) + .5;
       ok = !valid(1, id, x, y);
     }
-  } else if (id === 'sabotage' || id === 'frost'){ const mine = M.units.filter(u => u.side === 0); if (mine.length){ const u = mine[Math.floor(Math.random()*mine.length)]; x = u.x; y = u.y; } else ok = false; }
+  } else if (id === 'sabotage' || id === 'frost' || id === 'hijack'){ const mine = M.units.filter(u => u.side === 0); if (mine.length){ const u = mine[Math.floor(Math.random()*mine.length)]; x = u.x; y = u.y; } else ok = false; }
   else if (id === 'plating' || id === 'minefield') y = Math.max(.5, fr - 2.5);
-  else if (id === 'splash') y = Math.min(ROWS - .5, fr + 2.5);
+  else if (id === 'splash' || id === 'beachhead') y = Math.min(ROWS - .5, fr + 2.5);
   if (!ok || valid(1, id, x, y)){ again(); return; }
   R.energy -= C.cost; cast(1, id, x, y); again();
 }
 function step(dt){
-  if (!M.idle){ M.t -= dt; rival(); }
-  M.sides.forEach(S => {
+  if (M.coach < 3){
+    const pick = M.queue[M.sel];
+    if (M.coach < 2 && M.units.filter(u => u.side === 0).length > 1) M.coach = 2;
+    else if (M.coach < 2) M.coach = pick && UNITS[pick] ? 1 : 0;
+    else if (M.last[0]){ M.coach = 3; P.tut = true; store.set(P); M.note = { text:'You have it', side:0, t:1.6 }; }
+  }
+  if (!M.idle && M.coach >= 2){ M.t -= dt; rival(); }
+  M.sides.forEach((S, side) => {
     for (const k of ['over','frozen','shield','cap','heavy','wide','lock']) if (S[k] > 0) S[k] -= dt;
-    if (!M.idle) S.energy = Math.min(MAXE, S.energy + S.flow*dt*(S.cap > 0 ? 2 : 1));
+    // the side holding less ground gets up to 40% more energy
+    const behind = clamp(((side ? M.share : 1 - M.share) - .5)*1.6, 0, .4);
+    if (!M.idle) S.energy = Math.min(MAXE, S.energy + S.flow*dt*(S.cap > 0 ? 2 : 1)*(1 + behind));
   });
   for (let k = M.units.length - 1; k >= 0; k--){
     const u = M.units[k], S = M.sides[u.side];
@@ -538,7 +599,7 @@ function step(dt){
     const r = Math.floor(b.y), c = clamp(Math.floor(b.x), 0, COLS - 1);
     if (r < 0 || r >= ROWS){ M.bullets.splice(k, 1); continue; }
     const i = r*COLS + c, o = M.owner[i];
-    if (o === b.side) continue;
+    if (o === b.side || (o === 2 && M.tw[i] === b.side)) continue;
     let dead = true;
     if (o !== 2 && strike(i, b.side)){
       if (M.sides[b.side].wide > 0){ if (c > 0) strike(i - 1, b.side); if (c < COLS - 1) strike(i + 1, b.side); }
@@ -550,24 +611,25 @@ function step(dt){
     const q = M.shells[k]; q.t += dt;
     if (q.t >= q.dur){ blast(q.side, Math.floor(q.x1), Math.floor(q.y1), 2); tone(110, .14, 'sine', .04); M.puffs.push({ x:q.x1, y:q.y1, t:.3, side:q.side }); M.shells.splice(k, 1); }
   }
-  for (let k = M.temps.length - 1; k >= 0; k--){ const q = M.temps[k]; q.t -= dt; if (q.t <= 0){ if (M.owner[q.i] === 2) M.owner[q.i] = q.side; M.flash[q.i] = .4; M.temps.splice(k, 1); } }
+  for (let k = M.temps.length - 1; k >= 0; k--){ const q = M.temps[k]; q.t -= dt; if (q.t <= 0){ if (M.owner[q.i] === 2) M.owner[q.i] = q.side; M.tw[q.i] = -1; M.flash[q.i] = .4; M.temps.splice(k, 1); } }
   for (const list of [M.beams, M.puffs]) for (let k = list.length - 1; k >= 0; k--){ list[k].t -= dt; if (list[k].t <= 0) list.splice(k, 1); }
   if (M.note && M.note.t > 0) M.note.t -= dt;
   for (let i = 0; i < N; i++) if (M.flash[i] > 0) M.flash[i] = Math.max(0, M.flash[i] - 4*dt);
-  if (!M.idle){ const s = share(); if (M.t <= 0 || s >= .88 || s <= .12) finish(s); }
+  if (!M.idle){ const s = share(); M.share = s; if (M.t <= 0 || s >= .88 || s <= .12) finish(s); }
 }
 function finish(s){
-  M.over = true; M.sel = -1;
-  const won = s > .5, pct = Math.round(s*100);
+  M.over = true; M.sel = -1; clearMatch();
+  const won = s > .5, pct = Math.round(s*100), fresh = P.level >= P.best;
   const stars = !won ? 0 : s >= .8 ? 3 : s >= .65 ? 2 : 1;
   const earned = won ? (30 + 6*P.level + Math.round((s - .5)*80) + 10*(stars - 1))*(M.boss ? 2 : 1) : 8 + Math.round(s*20);
-  P.coins += earned;
+  const paid = fresh ? earned : Math.round(earned/2);
+  P.coins += paid;
   $('over-title').textContent = won ? (s >= .88 ? 'Clean sweep' : 'Stage cleared') + ' ' + '★'.repeat(stars) + '☆'.repeat(3 - stars) : s === .5 ? 'Dead heat' : 'Line lost';
-  $('over-sub').textContent = `You held ${pct}% of the field and salvaged ${earned} scrap.` + (won ? '' : ' Spend it in the workshop and try again.');
+  $('over-sub').textContent = `You held ${pct}% of the field and salvaged ${paid} scrap` + (fresh ? '.' : ' (half pay for a replay).') + (won ? '' : ' Spend it in the workshop and try again.');
   $('over-next').textContent = won ? 'Next stage' : 'Retry';
-  if (won){ P.level++; [523,659,784,1047].forEach((f, i) => tone(f, .2, 'triangle', .06, i*.1)); }
+  if (won){ if (fresh) P.best = P.level + 1; P.level = Math.min(P.best, P.level + 1); [523,659,784,1047].forEach((f, i) => tone(f, .2, 'triangle', .06, i*.1)); }
   else [392,330,262].forEach((f, i) => tone(f, .24, 'sine', .06, i*.13));
-  const card = Object.keys(CARDS).filter(k => CARDS[k].unlock === P.level && won).map(k => CARDS[k].name);
+  const card = Object.keys(CARDS).filter(k => fresh && won && CARDS[k].unlock === P.best).map(k => CARDS[k].name);
   if (card.length) $('over-sub').textContent += ` New cards: ${card.join(', ')}.`;
   store.set(P); chrome();
   $('dlg-over').hidden = false;
@@ -584,11 +646,16 @@ function layout(){
   geo = { t, dpr, w:r.width, h:r.height, gx:(r.width - COLS*t)/2, gy:(r.height - ROWS*t)/2 };
 }
 function drawUnit(u, col, fg, bg, ice){
-  const { t, gx, gy } = geo, S = M.sides[u.side], x = gx + u.x*t, y = gy + u.y*t, R = t*1.05, c = S.frozen > 0 || u.frz > 0 ? ice : col;
+  const { t, gx, gy } = geo, S = M.sides[u.side], x = gx + u.x*t, y = gy + u.y*t, R = t*1.15, c = S.frozen > 0 || u.frz > 0 ? ice : col;
   ctx.save(); ctx.translate(x, y);
-  ctx.beginPath(); ctx.arc(0, 0, R, 0, 7); ctx.fillStyle = fg; ctx.fill();
-  ctx.lineWidth = Math.max(2, t*.2); ctx.strokeStyle = bg; ctx.stroke();
-  if (u.max < 900){ ctx.beginPath(); ctx.arc(0, 0, R, -Math.PI/2, -Math.PI/2 + 2*Math.PI*u.life/u.max); ctx.strokeStyle = c; ctx.stroke(); }
+  // each turret type has its own body shape
+  const SH = { sentry:[0, 0], sweeper:[3, 0], pike:[4, 0], mortar:[4, .785], spinner:[6, 0], twin:[5, 0], flak:[8, .39] }[u.type];
+  ctx.beginPath();
+  if (!SH[0]) ctx.arc(0, 0, R, 0, 7);
+  else { const k = SH[0] === 3 ? 1.45 : SH[0] === 4 ? 1.3 : 1.15; for (let q = 0; q < SH[0]; q++){ const a = SH[1] + q*2*Math.PI/SH[0]; ctx.lineTo(Math.sin(a)*R*k, fwd(u.side)*Math.cos(a)*R*k); } ctx.closePath(); }
+  ctx.fillStyle = fg; ctx.fill();
+  ctx.lineJoin = 'round'; ctx.lineWidth = Math.max(2, t*.2); ctx.strokeStyle = bg; ctx.stroke();
+  if (u.max < 900){ ctx.lineWidth = Math.max(1.5, t*.16); ctx.beginPath(); ctx.arc(0, 0, R*1.62, -Math.PI/2, -Math.PI/2 + 2*Math.PI*u.life/u.max); ctx.strokeStyle = fg; ctx.stroke(); }
   ctx.fillStyle = c; ctx.strokeStyle = c; ctx.lineCap = 'round';
   const dir = a => [Math.sin(a), fwd(u.side)*Math.cos(a)];
   const line = (a, len, w) => { const [dx, dy] = dir(a); ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(dx*len, dy*len); ctx.stroke(); };
@@ -613,6 +680,12 @@ function draw(){
     for (let i = 0; i < N; i++) if (M.owner[i] === o) ctx.rect(gx + (i % COLS)*t + g/2, gy + Math.floor(i/COLS)*t + g/2, s, s);
     ctx.fill();
   }
+  for (const q of M.temps){ ctx.globalAlpha = .5; ctx.fillStyle = col[q.side]; ctx.fillRect(gx + (q.i % COLS)*t + g/2, gy + Math.floor(q.i/COLS)*t + g/2, s, s); ctx.globalAlpha = 1; }
+  if (P.pattern){
+    ctx.strokeStyle = bg; ctx.globalAlpha = .55; ctx.lineWidth = Math.max(1, t*.14); ctx.beginPath();
+    for (let i = 0; i < N; i++) if (M.owner[i] === 1){ const x = gx + (i % COLS)*t + g/2, y = gy + Math.floor(i/COLS)*t + g/2; ctx.moveTo(x, y + s); ctx.lineTo(x + s, y); }
+    ctx.stroke(); ctx.globalAlpha = 1;
+  }
   ctx.strokeStyle = fg; ctx.lineWidth = Math.max(1, t*.12); ctx.beginPath();
   for (let i = 0; i < N; i++) if (M.hp[i] > 0) ctx.rect(gx + (i % COLS)*t + t*.24, gy + Math.floor(i/COLS)*t + t*.24, t*.52, t*.52);
   ctx.stroke();
@@ -633,7 +706,7 @@ function draw(){
     ctx.strokeStyle = '#fff'; ctx.lineWidth = t*.3; ctx.stroke(); ctx.globalAlpha = 1;
   }
   ctx.lineWidth = Math.max(1, t*.12);
-  for (const b of M.bullets){ ctx.beginPath(); ctx.arc(gx + b.x*t, gy + b.y*t, Math.max(2, t*.3), 0, 7); ctx.fillStyle = bg; ctx.fill(); ctx.strokeStyle = fg; ctx.stroke(); }
+  for (const b of M.bullets){ ctx.beginPath(); ctx.arc(gx + b.x*t, gy + b.y*t, Math.max(2.5, t*.34), 0, 7); ctx.fillStyle = col[b.side]; ctx.fill(); ctx.strokeStyle = fg; ctx.stroke(); }
   for (const u of M.units) drawUnit(u, col[u.side], fg, bg, ice);
   for (const q of M.shells){
     const p = q.t/q.dur, x = gx + (q.x0 + (q.x1 - q.x0)*p)*t, y = gy + (q.y0 + (q.y1 - q.y0)*p)*t;
@@ -650,6 +723,11 @@ function draw(){
     else if (id === 'wedge'){ ctx.moveTo(gx + (c + .5)*t, gy + (r + 1)*t); ctx.lineTo(gx + (c - 3)*t, gy + (r - 6)*t); ctx.lineTo(gx + (c + 4)*t, gy + (r - 6)*t); ctx.closePath(); }
     else ctx.arc(gx + (c + .5)*t, gy + (r + .5)*t, (C.r || 1)*t + t*.5, 0, 7);
     ctx.stroke(); ctx.globalAlpha = bad ? .06 : .16; ctx.fill(); ctx.globalAlpha = 1; ctx.setLineDash([]);
+    if (aiming){ // guide lines so the target stays visible around a finger
+      ctx.globalAlpha = .45; ctx.lineWidth = 1; ctx.beginPath();
+      ctx.moveTo(gx, gy + (r + .5)*t); ctx.lineTo(gx + COLS*t, gy + (r + .5)*t); ctx.moveTo(gx + (c + .5)*t, gy); ctx.lineTo(gx + (c + .5)*t, gy + ROWS*t);
+      ctx.stroke(); ctx.globalAlpha = 1;
+    }
   }
   if (M.note && M.note.t > 0){
     const y = gy + (M.note.side ? 5 : ROWS - 5)*t, size = Math.round(Math.min(26, t*1.9));
@@ -667,12 +745,14 @@ function hud(){
   $('clock').textContent = Math.max(0, Math.ceil(M.t));
   $('energy').style.width = (A.energy*10) + '%';
   $('energy-n').textContent = Math.floor(A.energy) + '/' + MAXE;
-  const next = CARDS[M.queue[HAND]], key = M.queue.slice(0, HAND + 1).join() + M.sel + M.idle;
+  const next = CARDS[M.queue[HAND]], key = M.queue.slice(0, HAND + 1).join() + M.sel + M.idle + M.coach;
   if (key !== M.handKey){
     M.handKey = key;
     for (let k = 0; k < HAND; k++){ const c = CARDS[M.queue[k]]; $('pow-' + k).innerHTML = c ? `${ic(M.queue[k])}<i class="cost">${c.cost}</i><b>${c.name}</b><span>${c.desc}</span>` : ''; }
     const sel = CARDS[M.queue[M.sel]];
-    $('hint').textContent = M.idle ? '' : sel ? (sel.aim === 'own' ? 'Tap one of your tiles to build it there.' : 'Tap the board where you want it.') : 'Pick a card.' + (next ? ' Next up: ' + next.name : '');
+    const coach = ['Step 1 of 3: tap a turret card (green icon) below.', 'Step 2 of 3: press on your own ground, drag to aim, let go to build.', 'Step 3 of 3: now play any other card. Strikes land where you aim.'][M.coach];
+    $('hint').classList.toggle('coach', !!coach && !M.idle);
+    $('hint').textContent = M.idle ? '' : coach ? coach : sel ? (sel.aim === 'own' ? 'Press on your own ground, drag to aim, let go to build.' : 'Press on the board, drag to aim, let go to play.') : 'Pick a card.' + (next ? ' Next up: ' + next.name : '');
   }
   for (let k = 0; k < HAND; k++){
     const c = CARDS[M.queue[k]], b = $('pow-' + k), can = c && !M.idle && !M.over && A.lock <= 0 && A.energy >= c.cost;
@@ -696,8 +776,10 @@ function aim(e, tap){
   M.cur = { x, y };
   if (tap){ if (M.sel >= 0) playAt(M.sel, x, y); else M.note = { text:'Pick a card first', side:0, t:1 }; }
 }
-cv.addEventListener('pointerdown', e => aim(e, true));
+cv.addEventListener('pointerdown', e => { try { cv.setPointerCapture(e.pointerId); } catch {} aiming = true; aim(e, false); });
 cv.addEventListener('pointermove', e => aim(e, false));
+cv.addEventListener('pointerup', e => { if (!aiming) return; aiming = false; aim(e, true); });
+cv.addEventListener('pointercancel', () => { aiming = false; });
 document.addEventListener('keydown', e => {
   if (!live()){ if (e.key === 'Escape' || e.key === 'p') pause(!paused); return; }
   const mv = { ArrowLeft:[-1, 0], ArrowRight:[1, 0], ArrowUp:[0, -1], ArrowDown:[0, 1] }[e.key];
@@ -719,25 +801,42 @@ function chrome(){
   $('tag-coins').textContent = P.coins + ' scrap';
   $('btn-sound').textContent = P.sound ? 'Sound on' : 'Sound off';
 }
+let wipe = false;
+const MKEY = 'flipfire.match';
+function saveMatch(){
+  if (!live() || M.coach < 3) return;
+  try { localStorage.setItem(MKEY, JSON.stringify({ ...M, level:P.level, owner:Array.from(M.owner), hp:Array.from(M.hp), mine:Array.from(M.mine), tw:Array.from(M.tw), flash:0 })); } catch {}
+}
+function clearMatch(){ try { localStorage.removeItem(MKEY); } catch {} }
+function loadMatch(){
+  try {
+    const d = JSON.parse(localStorage.getItem(MKEY));
+    if (!d || d.level !== P.level || d.owner.length !== N || d.over) return false;
+    M = { ...d, owner:Uint8Array.from(d.owner), hp:Uint8Array.from(d.hp), mine:Uint8Array.from(d.mine), tw:Int8Array.from(d.tw), flash:new Float32Array(N), handKey:'', sel:-1 };
+    return true;
+  } catch { return false; }
+}
 function home(){
   chrome();
   const boss = P.level % 5 === 0;
-  $('home-title').textContent = 'Stage ' + P.level + (boss ? ' · Boss' : '');
+  $('home-title').textContent = 'Stage ' + P.level + (boss ? ' · Boss' : '') + (P.level < P.best ? ' · replay' : '');
+  $('st-prev').disabled = P.level <= 1; $('st-next').disabled = P.level >= P.best;
   document.querySelectorAll('#tabs .tab').forEach(b => { b.classList.toggle('on', b.dataset.tab === tab); $('tab-' + b.dataset.tab).hidden = b.dataset.tab !== tab; });
-  $('home-how').textContent = `Pick a card, then tap the board. Turrets go anywhere on your own tiles and fire until they wear out, or until the rival takes the tile under them. Strikes land where you tap. Boosts and tricks play the moment you tap the card. Hold more of the field after ${TIME} seconds.`;
-  $('home-sub').textContent = 'The rival builds turrets of its own'
-    + (P.level >= 3 ? ' and has plated tiles that take two hits.' : '.')
+  $('home-how').textContent = `Pick a card, press on the board, drag to aim and let go. Turrets go anywhere on your own tiles and fire until they wear out, or until the rival takes the tile under them. Strikes land where you aim. Most boosts and tricks play the moment you tap the card. Whoever holds less ground gains energy faster. Hold more of the field after ${TIME} seconds.`;
+  const who = rivalFor(P.level);
+  $('home-sub').textContent = `Your rival is ${who.name}, who ${who.line}`
+    + (P.level >= 3 ? ' Some of its tiles are plated and take two hits.' : '')
     + (P.level >= 4 && P.level % 4 ? ' Walls on the field stop shots.' : '')
     + (boss ? ' Boss stage: the rival starts with two long-lived Sweepers. Double scrap if you win.' : '');
   $('deck-head').textContent = `Deck · ${P.deck.length} of ${DECK} chosen`;
-  const later = Object.values(CARDS).map(c => c.unlock).filter(u => u > P.level), nextAt = later.length ? Math.min(...later) : 0;
+  const later = Object.values(CARDS).map(c => c.unlock).filter(u => u > P.best), nextAt = later.length ? Math.min(...later) : 0;
   $('home-next').textContent = nextAt ? `Clear stage ${nextAt - 1} to unlock ${Object.values(CARDS).filter(c => c.unlock === nextAt).map(c => c.name).join(' and ')}.` : 'Every card is unlocked.';
   $('strip').innerHTML = P.deck.map(ic).join('') + '<span class="gap"></span>'.repeat(DECK - P.deck.length);
   $('kinds').innerHTML = KINDS.map(k => `<button class="chipb${kindF === k ? ' on' : ''}" data-kind="${k}">${k}</button>`).join('');
   $('cards').innerHTML = Object.entries(CARDS).filter(([, c]) => kindF === 'All' || c.kind === kindF).sort((a, b) => a[1].unlock - b[1].unlock).map(([k, c]) => {
-    const open = P.level >= c.unlock, on = P.deck.includes(k), r = P.rank[k] || 0, full = r >= MAXRANK;
-    return `<div class="cardrow"><button class="opt cardbtn${on ? ' sel' : ''}" data-card="${k}" ${open && (on || P.deck.length < DECK) ? '' : 'disabled'}>${ic(k)}<div><b>${c.name} · ${c.cost}</b><small>${c.desc}</small></div><em>${!open ? 'Stage ' + c.unlock : on ? 'In deck' : 'Add'}</em></button>`
-      + `<button class="rk" data-rank="${k}" aria-label="Raise ${c.name} rank" ${open && !full && P.coins >= rcost(r) ? '' : 'disabled'}>Rank ${r + 1}<small class="num">${full ? 'max' : rcost(r)}</small></button></div>`;
+    const open = P.best >= c.unlock, on = P.deck.includes(k), r = P.rank[k] || 0, full = r >= MAXRANK || !!c.norank, st = stat(k, r);
+    return `<div class="cardrow"><button class="opt cardbtn${on ? ' sel' : ''}" data-card="${k}" ${open && (on || P.deck.length < DECK) ? '' : 'disabled'}>${ic(k)}<div><b>${c.name} · ${c.cost}</b><small>${c.desc}</small>${st ? `<small class="st">Rank ${r + 1}: ${st}${full ? '' : ' → ' + stat(k, r + 1)}</small>` : ''}</div><em>${!open ? 'Stage ' + c.unlock : on ? 'In deck' : 'Add'}</em></button>`
+      + `<button class="rk" data-rank="${k}" aria-label="Raise ${c.name} rank" ${open && !full && P.coins >= rcost(r) ? '' : 'disabled'}>${c.norank ? 'No ranks' : 'Rank up'}<small class="num">${c.norank ? '–' : full ? 'max' : rcost(r)}</small></button></div>`;
   }).join('');
   $('btn-play').disabled = P.deck.length !== DECK;
   $('btn-play').textContent = P.deck.length === DECK ? 'Play' : `Pick ${DECK - P.deck.length} more`;
@@ -745,16 +844,27 @@ function home(){
     const r = P.up[k], full = r >= u.max, c = cost(k, r);
     return `<button class="opt" data-up="${k}" ${full || P.coins < c ? 'disabled' : ''}><div><b>${u.name} · rank ${r}/${u.max}</b><small>${u.desc}</small></div><em class="num">${full ? 'Maxed' : c + ' scrap'}</em></button>`;
   }).join('');
+  $('settings').innerHTML = `<button class="opt${P.pattern ? ' sel' : ''}" data-set="pattern"><div><b>Stripe the rival's tiles</b><small>Tells the two sides apart without relying on colour</small></div><em>${P.pattern ? 'On' : 'Off'}</em></button>`
+    + `<button class="opt" data-set="reset"><div><b>${wipe ? 'Tap again to erase everything' : 'Reset progress'}</b><small>Clears stages, scrap, ranks and your deck</small></div><em>${wipe ? 'Confirm' : 'Reset'}</em></button>`;
   $('dlg-over').hidden = true; $('dlg-pause').hidden = true; $('dlg-home').hidden = false;
   paused = false; newMatch(true);
 }
-$('tabs').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (!b) return; tab = b.dataset.tab; home(); });
+$('tabs').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (!b) return; tab = b.dataset.tab; wipe = false; home(); });
+$('st-prev').addEventListener('click', () => { if (P.level > 1){ P.level--; store.set(P); home(); } });
+$('st-next').addEventListener('click', () => { if (P.level < P.best){ P.level++; store.set(P); home(); } });
+$('settings').addEventListener('click', e => {
+  const b = e.target.closest('[data-set]'); if (!b) return;
+  if (b.dataset.set === 'pattern'){ P.pattern = !P.pattern; wipe = false; }
+  else if (!wipe){ wipe = true; home(); return; }
+  else { wipe = false; Object.assign(P, { level:1, best:1, coins:0, up:{ rapid:0, dynamo:0, van:0 }, deck:[], rank:{}, tut:false }); tidy(); clearMatch(); tab = 'battle'; }
+  store.set(P); home();
+});
 $('kinds').addEventListener('click', e => { const b = e.target.closest('[data-kind]'); if (!b) return; kindF = b.dataset.kind; home(); });
 $('cards').addEventListener('click', e => {
   const keep = fn => { const top = $('tab-deck').scrollTop; fn(); home(); $('tab-deck').scrollTop = top; };
   const u = e.target.closest('[data-rank]');
   if (u && !u.disabled){
-    const k = u.dataset.rank, r = P.rank[k] || 0; if (r >= MAXRANK || P.coins < rcost(r)) return;
+    const k = u.dataset.rank, r = P.rank[k] || 0; if (r >= MAXRANK || CARDS[k].norank || P.coins < rcost(r)) return;
     keep(() => { P.coins -= rcost(r); P.rank[k] = r + 1; store.set(P); tone(700, .1); tone(1050, .12, 'triangle', .05, .07); }); return;
   }
   const b = e.target.closest('[data-card]'); if (!b || b.disabled) return;
@@ -766,17 +876,20 @@ $('upgrades').addEventListener('click', e => {
   const k = b.dataset.up, c = cost(k, P.up[k]); if (P.coins < c) return;
   P.coins -= c; P.up[k]++; store.set(P); tone(700, .1); tone(1050, .12, 'triangle', .05, .07); home();
 });
-function play(){ if (P.deck.length !== DECK) return; $('dlg-home').hidden = true; $('dlg-over').hidden = true; paused = false; newMatch(false); tone(440, .1); }
+function play(){ if (P.deck.length !== DECK) return; clearMatch(); $('dlg-home').hidden = true; $('dlg-over').hidden = true; paused = false; newMatch(false); tone(440, .1); }
 $('btn-play').addEventListener('click', play);
 $('over-next').addEventListener('click', play);
 $('over-home').addEventListener('click', home);
 $('btn-sound').addEventListener('click', () => { P.sound = !P.sound; store.set(P); chrome(); tone(660, .1); });
 $('btn-pause').addEventListener('click', () => pause(true));
 $('pause-resume').addEventListener('click', () => pause(false));
-$('pause-quit').addEventListener('click', home);
+$('pause-quit').addEventListener('click', () => { clearMatch(); home(); });
 
 window.__flipfire = { P, CARDS, UNITS, play:() => play(), state:() => M, run(bot){ while (!M.over){ bot(M, playAt, power); step(1/30); } return share(); } };
 new ResizeObserver(layout).observe($('field'));
-layout(); home(); requestAnimationFrame(frame);
+layout(); home();
+if (loadMatch()){ $('dlg-home').hidden = true; paused = true; $('dlg-pause').hidden = false; }
+setInterval(saveMatch, 2000);
+requestAnimationFrame(frame);
 })();
 </script>
