@@ -15,9 +15,10 @@ An original real-time tile battle in `flipfire.html`; open it in a browser to pl
 
 - The field is a 22 by 36 grid split between you and a rival. Pick a card, press on the board, drag to aim and let go.
 - Cannon cards (14 kinds) build a gun anywhere on your own ground. A cannon has health and keeps firing until the rival shoots it down.
+- Troop cards (Runner, Squad, Brute, Sapper) walk up the field taking tiles; dragon cards (Drake, Frost wyrm, Elder dragon) fly over everything and burn a path.
 - Effect cards (29: strikes, guards, boosts, tricks) happen once.
-- You bring 4 cannons and 6 effects, and hold 2 cannons and 3 effects at a time. Energy fills over time; the side holding less ground gains it faster.
-- Scrap earned each stage buys workshop upgrades and raises individual cards up to rank 4.
+- You bring 5 forces (cannons, troops, dragons) and 6 effects, and hold 2 forces and 3 effects at a time. Energy fills over time; the side holding less ground gains it faster.
+- Coins come from wins, stars, first clears, win streaks, a goal on every stage and a daily reward. They buy workshop upgrades and raise each card up to level 10.
 - Five named rivals rotate by stage. Later stages add plated tiles and walls; every fifth stage is a boss stage.
 - Cleared stages can be replayed, an unfinished match resumes after a reload, and there is an option to stripe the rival's tiles.
 - Hold more of the field after 75 seconds to win.

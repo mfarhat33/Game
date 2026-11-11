@@ -125,6 +125,8 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
 .strip .ic.gun{border-radius:12px;box-shadow:none}
 .strip .gap{height:38px;border:1px dashed var(--line);border-radius:10px}
 .chips{display:grid;grid-template-columns:repeat(5,1fr);gap:4px}
+
+.chips.four{grid-template-columns:repeat(4,1fr)}
 .chipb{border:1px solid var(--line);background:none;border-radius:999px;padding:5px 0;font-weight:800;font-size:12px;min-width:0}
 .chipb.on{background:var(--fg);color:var(--bg);border-color:var(--fg)}
 .row{display:flex;gap:8px;flex-wrap:wrap}
@@ -134,6 +136,24 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
 .btn:disabled{opacity:.5;cursor:default}
 .stars{font-size:40px;letter-spacing:.1em;line-height:1;color:var(--gold);text-align:center}
 .over h2,.over p{text-align:center}
+.card.troop{background:linear-gradient(color-mix(in srgb,var(--org) 22%,var(--panel)),var(--panel) 70%);border-color:color-mix(in srgb,var(--org) 45%,var(--line))}
+.card.drg{background:linear-gradient(color-mix(in srgb,var(--vio) 24%,var(--panel)),var(--panel) 70%);border-color:color-mix(in srgb,var(--vio) 45%,var(--line))}
+.ic.troop{border-radius:9px;background:var(--fg);color:var(--org);box-shadow:0 0 0 2px var(--org)}
+.ic.drg{border-radius:50% 9px;background:var(--fg);color:var(--vio);box-shadow:0 0 0 2px var(--vio)}
+.strip .ic.troop,.strip .ic.drg{border-radius:12px;box-shadow:none}
+.card u{position:absolute;top:5px;left:6px;text-decoration:none;font-size:10.5px;font-weight:800;color:var(--muted)}
+.tip{position:fixed;left:50%;bottom:calc(170px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:15;width:min(330px,calc(100% - 32px));background:var(--fg);color:var(--bg);border-radius:14px;padding:10px 12px;box-shadow:var(--shadow);pointer-events:none}
+.tip b{display:block;font-weight:800}
+.tip small{display:block;opacity:.82;font-size:12.5px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.steps{display:flex;flex-direction:column;gap:8px}
+.steps div{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:13.5px}
+.steps .ic{width:30px;height:30px}
+.steps .ic svg{width:19px;height:19px}
+.goal{display:flex;align-items:center;gap:10px;border:1px dashed var(--line);border-radius:14px;padding:9px 12px;font-size:13.5px}
+.goal b{font-weight:800}
+.goal em{margin-left:auto;font-style:normal;font-weight:800;color:var(--gold);white-space:nowrap}
+.goal.done{border-style:solid;opacity:.6}
 @media (prefers-reduced-motion: reduce){ .card{transition:none} }
 </style>
 
@@ -142,7 +162,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
     <h1 class="mark">Flip<i>fire</i></h1>
     <div class="meta">
       <span class="tag num" id="tag-level">Stage 1</span>
-      <span class="tag coin num" id="tag-coins">0 scrap</span>
+      <span class="tag coin num" id="tag-coins">0 coins</span>
       <button class="tool" id="btn-pause">Pause</button>
     </div>
   </header>
@@ -156,12 +176,15 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
   <section class="tray" aria-label="Your hand">
     <div class="erow"><span class="ebub num" id="energy-n" aria-label="Energy">0</span><div class="energy" aria-hidden="true"><span id="energy"></span></div></div>
     <div class="hand">
-      <div class="grp guns"><h4>Cannons</h4><div class="slots"><button class="card gun" id="pow-0" disabled></button><button class="card gun" id="pow-1" disabled></button></div></div>
+      <div class="grp guns"><h4>Forces</h4><div class="slots"><button class="card gun" id="pow-0" disabled></button><button class="card gun" id="pow-1" disabled></button></div></div>
       <div class="grp fx"><h4>Effects</h4><div class="slots"><button class="card" id="pow-2" disabled></button><button class="card" id="pow-3" disabled></button><button class="card" id="pow-4" disabled></button></div></div>
     </div>
     <p class="hint" id="hint"></p>
+    <p class="sr" id="sr" aria-live="polite"></p>
   </section>
 </div>
+
+<div class="tip" id="tip" hidden></div>
 
 <div class="veil" id="dlg-home">
   <div class="sheet home">
@@ -172,19 +195,21 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
     </div>
     <div class="tabs" id="tabs">
       <button class="tab" data-tab="battle">Battle</button>
-      <button class="tab" data-tab="guns">Cannons</button>
+      <button class="tab" data-tab="guns">Forces</button>
       <button class="tab" data-tab="fx">Effects</button>
       <button class="tab" data-tab="workshop">Workshop</button>
     </div>
     <div class="pane" id="tab-battle">
       <div class="rival" id="rival"></div>
       <div class="mods" id="mods"></div>
+      <div class="goal" id="home-goal"></div>
+      <div class="list" id="daily"></div>
       <h3>How to play</h3>
-      <p id="home-how"></p>
+      <div class="steps" id="home-how"></div>
       <h3>Coming up</h3>
       <p id="home-next"></p>
     </div>
-    <div class="pane" id="tab-guns" hidden><h3 id="guns-head"></h3><div class="strip" id="guns-strip"></div><p>Cannons stay on the field until the rival shoots their health down to zero.</p><div class="list" id="guns-list"></div></div>
+    <div class="pane" id="tab-guns" hidden><h3 id="guns-head"></h3><div class="strip" id="guns-strip"></div><div class="chips four" id="fkinds"></div><div class="list" id="guns-list"></div></div>
     <div class="pane" id="tab-fx" hidden><h3 id="fx-head"></h3><div class="strip" id="fx-strip"></div><div class="chips" id="kinds"></div><div class="list" id="fx-list"></div></div>
     <div class="pane" id="tab-workshop" hidden><h3>Upgrades</h3><div class="list" id="upgrades"></div><h3>Settings</h3><div class="list" id="settings"></div></div>
     <div class="row"><button class="btn go" id="btn-play">Play</button></div>
@@ -206,7 +231,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
 <div class="veil" id="dlg-pause" hidden>
   <div class="sheet">
     <h2>Paused</h2>
-    <p>Pick a card, press on the board, drag to aim and let go to play it. Let go off the board to cancel. On a keyboard: 1 to 5 pick a card, the arrow keys move the target, Enter plays it.</p>
+    <p>Pick a card, press on the board, drag to aim and let go to play it. Let go off the board to cancel. Hold a card to read what it does. On a keyboard: 1 to 5 pick a card, the arrow keys move the target, Enter plays it.</p>
     <div class="row">
       <button class="btn" id="pause-quit">Quit stage</button>
       <button class="btn go" id="pause-resume">Resume</button>
@@ -236,6 +261,20 @@ const UNITS = {
   hunter:  { gap:1,   hp:10, speed:22 },
   rail:    { gap:2.6, hp:9 }
 };
+/* Troops walk up the field taking ground; dragons (fly) cross over everything and burn a path.
+   spd = tiles per second, gap = seconds between hits, w = half-width of the path a troop clears, rad = breath radius */
+const MOB = {
+  runner: { hp:5,  spd:4,   gap:.2,  dmg:1, w:0 },
+  grunt:  { hp:4,  spd:3.2, gap:.22, dmg:1, w:0 },
+  brute:  { hp:26, spd:1.4, gap:.35, dmg:3, w:1 },
+  sapper: { hp:9,  spd:2.2, gap:.3,  dmg:1, w:0, boom:true },
+  drake:  { fly:true, hp:14, spd:2.5, gap:.25, rad:1 },
+  wyrm:   { fly:true, hp:10, spd:3,   gap:.2,  rad:0, frost:true },
+  elder:  { fly:true, hp:30, spd:1.6, gap:.3,  rad:2 }
+};
+const isForce = id => !!(UNITS[id] || MOB[id]);
+const hpOf = type => (UNITS[type] || MOB[type]).hp;
+const lookOf = id => UNITS[id] ? 'gun' : MOB[id] && MOB[id].fly ? 'drg' : MOB[id] ? 'troop' : '';
 /* aim: 'own' = must land on your tiles, 'any' = anywhere, 'none' = plays the moment you tap the card */
 const CARDS = {
   sentry:   { name:'Sentry',    cost:3, unlock:1, kind:'Cannon', aim:'own', r:1, desc:'Fires straight ahead' },
@@ -252,6 +291,13 @@ const CARDS = {
   mender:   { name:'Mender',    cost:4, unlock:7, kind:'Cannon', aim:'own', r:6, desc:'No gun; repairs cannons nearby' },
   hunter:   { name:'Hunter',    cost:5, unlock:8, kind:'Cannon', aim:'own', r:1, desc:'Targets the nearest rival cannon' },
   rail:     { name:'Rail',      cost:6, unlock:9, kind:'Cannon', aim:'own', r:1, desc:'Slow beam up the whole column' },
+  runner:   { name:'Runner',    cost:2, unlock:1, kind:'Troop',  aim:'own', r:1, desc:'Fast scout that takes a thin path' },
+  squad:    { name:'Squad',     cost:4, unlock:3, kind:'Troop',  aim:'own', r:2, desc:'Three foot soldiers side by side' },
+  brute:    { name:'Brute',     cost:5, unlock:4, kind:'Troop',  aim:'own', r:1, desc:'Slow, tough, clears a path 3 wide' },
+  sapper:   { name:'Sapper',    cost:4, unlock:6, kind:'Troop',  aim:'own', r:1, desc:'Blows up on the first cannon it meets' },
+  drake:    { name:'Drake',     cost:6, unlock:5, kind:'Dragon', aim:'own', r:1, desc:'Flies over everything, burning a strip' },
+  wyrm:     { name:'Frost wyrm', cost:5, unlock:8, kind:'Dragon', aim:'own', r:1, desc:'Fast flier that freezes cannons it passes' },
+  elder:    { name:'Elder dragon', cost:8, unlock:10, kind:'Dragon', aim:'own', r:1, desc:'Slow, huge, burns a wide swathe' },
   trench:   { name:'Trench',    cost:3, unlock:1, kind:'Strike', aim:'any',  desc:'Cut a strip 3 wide, 8 deep' },
   splash:   { name:'Splash',    cost:4, unlock:1, kind:'Strike', aim:'any',  r:3, desc:'Flip a round patch where you aim' },
   barrage:  { name:'Barrage',   cost:3, unlock:1, kind:'Strike', aim:'none', desc:'One shot up every column' },
@@ -297,6 +343,14 @@ const ICON = {
   mender:'<circle cx="12" cy="12" r="8"/><path d="M12 8v8M8 12h8"/>',
   hunter:'<circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="1.5"/><path d="M12 2v5M12 17v5M2 12h5M17 12h5"/>',
   rail:'<circle cx="12" cy="19" r="3"/><path d="M9 15V2M15 15V2M12 12V5"/>',
+  runner:'<circle cx="12" cy="5.5" r="2.5"/><path d="M12 8v7M12 15l-3.5 6M12 15l3.5 6M7.5 11.5h9"/>',
+  grunt:'<circle cx="12" cy="5.5" r="2.5"/><path d="M12 8v7M12 15l-3.5 6M12 15l3.5 6M7.5 11.5h9"/>',
+  squad:'<circle cx="5.5" cy="8" r="2"/><circle cx="12" cy="6" r="2"/><circle cx="18.5" cy="8" r="2"/><path d="M5.5 11v8M12 9v11M18.5 11v8"/>',
+  brute:'<rect x="6" y="9" width="12" height="11" rx="2"/><path d="M9 9V4h6v5M6 14.5h12"/>',
+  sapper:'<circle cx="11" cy="15" r="6"/><path d="M11 9V6l5-3M17 2.5l1.5 1.5"/>',
+  drake:'<path d="M12 4v15M12 9C8.5 4.5 4 6 2 10.5c3-1 5 0 6 2.5M12 9c3.5-4.5 8-3 10 1.5-3-1-5 0-6 2.5M10 19l2 3 2-3"/>',
+  wyrm:'<path d="M12 6v13M12 10C9 6.5 5 7.5 3 11.5M12 10c3-3.5 7-2.5 9 1.5M9.5 19l2.5 3 2.5-3M12 2v2M9 3.5l6 0"/>',
+  elder:'<path d="M12 6v13M12 10C7 3.5 3 6.5 1 12c3-1 6 0 7 3M12 10c5-6.5 9-3.5 11 2-3-1-6 0-7 3M9 3.5l3 2.5 3-2.5M10 19l2 3 2-3"/>',
   trench:'<rect x="8" y="3" width="8" height="18" rx="1"/><path d="M12 17V8M9.5 10.5 12 8l2.5 2.5"/>',
   splash:'<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/>',
   barrage:'<path d="M5 20V8M12 20V4M19 20V8M3 10l2-2 2 2M10 6l2-2 2 2M17 10l2-2 2 2"/>',
@@ -328,15 +382,15 @@ const ICON = {
   corrode:'<rect x="4" y="4" width="16" height="16" rx="2" stroke-dasharray="3 3"/><path d="M9 15l6-6"/>'
 };
 const svg = (id, stroke = 'currentColor', w = 2) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[id] || ''}</svg>`;
-const ic = id => `<span class="ic ${UNITS[id] ? 'gun' : 'k-' + CARDS[id].kind}">${svg(id)}</span>`;
-const KINDS = ['All', 'Strike', 'Guard', 'Boost', 'Trick'];
+const ic = id => `<span class="ic ${lookOf(id) || 'k-' + CARDS[id].kind}">${svg(id)}</span>`;
+const KINDS = ['All', 'Strike', 'Guard', 'Boost', 'Trick'], FKINDS = ['All', 'Cannon', 'Troop', 'Dragon'];
 /* Rivals rotate by stage. depth = how many rows behind its front it likes to build. */
 const RIVALS = [
-  { name:'Swarm',    line:'Floods the field with cheap, fast cannons.', depth:[2, 6], cards:['sentry','sweeper','scatter','rattler','twin','spinner','overdrive','spark','barrage','capacitor'] },
-  { name:'Needle',   line:'Pushes narrow and deep with beams and strips.', depth:[1, 4], cards:['pike','sentry','bouncer','rail','trench','wedge','crossfire','heavy','broadhead'] },
-  { name:'Brick',    line:'Digs in behind tough cannons, plating and mines.', depth:[5, 10], cards:['bastion','sentry','twin','flak','mender','plating','barricade','minefield','shield','refit'] },
-  { name:'Storm',    line:'Shells you from range and hits wide areas.', depth:[4, 9], cards:['mortar','sweeper','scatter','splash','tide','wildfire','meteor','beachhead','overdrive'] },
-  { name:'Saboteur', line:'Freezes, wrecks and steals your cannons.', depth:[3, 7], cards:['sentry','sweeper','hunter','sabotage','frost','jam','hijack','corrode','lockdown','stasis','trench'] }
+  { name:'Swarm',    line:'Floods the field with cheap, fast cannons.', depth:[2, 6], cards:['sentry','sweeper','scatter','rattler','twin','spinner','runner','squad','overdrive','spark','barrage','capacitor'], tune:.8 },
+  { name:'Needle',   line:'Pushes narrow and deep with beams and strips.', depth:[1, 4], cards:['pike','sentry','bouncer','rail','drake','trench','wedge','crossfire','heavy','broadhead'], tune:1.15 },
+  { name:'Brick',    line:'Digs in behind tough cannons, plating and mines.', depth:[5, 10], cards:['bastion','sentry','twin','flak','mender','brute','plating','barricade','minefield','shield','refit'], tune:1.1 },
+  { name:'Storm',    line:'Shells you from range and hits wide areas.', depth:[4, 9], cards:['mortar','sweeper','scatter','drake','elder','splash','tide','wildfire','meteor','beachhead','overdrive'], tune:1.1 },
+  { name:'Saboteur', line:'Freezes, wrecks and steals your cannons.', depth:[3, 7], cards:['sentry','sweeper','hunter','sapper','wyrm','sabotage','frost','jam','hijack','corrode','lockdown','stasis','trench'], tune:.8 }
 ];
 const rivalFor = n => RIVALS[(n - 1) % RIVALS.length];
 const UPG = {
@@ -344,24 +398,26 @@ const UPG = {
   dynamo: { name:'Dynamo',       max:6, desc:'+10% energy flow per rank' },
   van:    { name:'Vanguard',     max:3, desc:'Start two rows further up per rank' }
 };
-const NG = 4, NF = 6, HG = 2, HF = 3, HAND = HG + HF, MAXE = 10, MAXRANK = 3, MAXUNITS = 8;
+const NG = 5, NF = 6, HG = 2, HF = 3, HAND = HG + HF, MAXE = 10, MAXRANK = 9, MAXUNITS = 8, DONE = 5;
 const cost = (k, r) => Math.round(40*(r + 1)*Math.pow(1.45, r));
-const rcost = r => 50*(r + 1)*(r + 1);
+const rcost = r => 20 + 15*r*r;   // coins to go from level r+1 to r+2
+const lvPow = r => 1 + .1*r;        // every level adds 10%
 const f1 = v => String(Math.round(v*10)/10);
 /* What a card does at rank index r (0 = rank 1), in a few words. */
 function stat(id, r){
-  const pw = 1 + .25*r, R = v => Math.round(v*pw), sec = v => f1(v*pw) + 's';
-  if (UNITS[id]) return R(UNITS[id].hp) + ' health';
+  const pw = lvPow(r), k = Math.round((pw - 1)*4), R = v => Math.round(v*pw), sec = v => f1(v*pw) + 's';
+  if (id === 'squad') return '3 × ' + R(MOB.grunt.hp) + ' health';
+  if (isForce(id)) return R(hpOf(id)) + ' health';
   switch (id){
     case 'trench': return R(8) + ' deep';
     case 'wedge': return R(7) + ' deep';
-    case 'splash': return 'radius ' + (3 + (r >= 2 ? 1 : 0));
-    case 'plating': return 'radius ' + (4 + (r >= 2 ? 1 : 0));
-    case 'barrage': return r ? `pierces ${r} extra` : 'no pierce';
-    case 'turncoat': return r ? `turned shots pierce ${r}` : 'no pierce';
-    case 'stasis': return r ? `plus ${f1(r*.5)}s shield` : 'no shield';
-    case 'crossfire': return (2 + (r >= 2 ? 1 : 0)) + ' rows';
-    case 'tide': return (r >= 2 ? 3 : 2) + ' tiles deep';
+    case 'splash': return 'radius ' + (3 + (k >= 2 ? 1 : 0));
+    case 'plating': return 'radius ' + (4 + (k >= 2 ? 1 : 0));
+    case 'barrage': return k ? `pierces ${k} extra` : 'no pierce';
+    case 'turncoat': return k ? `turned shots pierce ${k}` : 'no pierce';
+    case 'stasis': return k ? `plus ${f1(k*.5)}s shield` : 'no shield';
+    case 'crossfire': return (2 + (k >= 2 ? 1 : 0)) + ' rows';
+    case 'tide': return (k >= 2 ? 3 : 2) + ' tiles deep';
     case 'sabotage': return R(10) + ' damage';
     case 'minefield': return R(6) + ' mines';
     case 'wildfire': return R(20) + ' tiles';
@@ -384,20 +440,30 @@ const store = {
   get(d){ try { const v = localStorage.getItem('flipfire'); return v ? { ...d, ...JSON.parse(v) } : d; } catch { return d; } },
   set(v){ try { localStorage.setItem('flipfire', JSON.stringify(v)); } catch {} }
 };
-const P = store.get({ level:1, best:1, coins:0, up:{ rapid:0, dynamo:0, van:0 }, sound:true, guns:[], fx:[], rank:{}, stars:{} });
+const P = store.get({ level:1, best:1, coins:0, up:{ rapid:0, dynamo:0, van:0 }, sound:true, guns:[], fx:[], rank:{}, stars:{}, goals:{}, streak:0, day:'' });
 function tidy(){
-  P.rank = P.rank || {}; P.stars = P.stars || {};
+  P.rank = P.rank || {}; P.stars = P.stars || {}; P.goals = P.goals || {};
+  if (!P.lv2){ P.lv2 = true; for (const k in P.rank) P.rank[k] = Math.min(MAXRANK, P.rank[k]*2); }  // old ranks become levels
   P.best = Math.max(P.best || 1, P.level); P.level = Math.max(1, Math.min(P.level, P.best));
   const old = P.deck || []; delete P.deck;
   const fill = (list, isGun, n) => {
-    list = (list || []).concat(old).filter((k, i, a) => CARDS[k] && !!UNITS[k] === isGun && CARDS[k].unlock <= P.best && a.indexOf(k) === i).slice(0, n);
-    for (const k of Object.keys(CARDS)) if (list.length < n && !!UNITS[k] === isGun && CARDS[k].unlock <= P.best && !list.includes(k)) list.push(k);
+    list = (list || []).concat(old).filter((k, i, a) => CARDS[k] && isForce(k) === isGun && CARDS[k].unlock <= P.best && a.indexOf(k) === i).slice(0, n);
+    for (const k of Object.keys(CARDS)) if (list.length < n && isForce(k) === isGun && CARDS[k].unlock <= P.best && !list.includes(k)) list.push(k);
     return list;
   };
   P.guns = fill(P.guns, true, NG); P.fx = fill(P.fx, false, NF);
 }
 tidy();
-let tab = 'battle', kindF = 'All';
+let tab = 'battle', kindF = 'All', fkindF = 'All';
+/* One goal per stage, paid once. */
+const GOALS = [
+  { text:'Win holding 65% or more', test:(m, s) => s >= .65 },
+  { text:'Win without losing a cannon', test:m => m.gunsLost === 0 },
+  { text:'Win after destroying 3 rival cannons', test:m => m.gunsKilled >= 3 },
+  { text:'Win having played 12 or more cards', test:m => m.played >= 12 }
+];
+const goalFor = n => GOALS[(n - 1) % GOALS.length], goalPay = n => 30 + 5*n;
+const today = () => { const d = new Date(); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); };
 
 /* ---------- sound ---------- */
 let actx = null, lastTick = 0;
@@ -411,6 +477,20 @@ function tone(f, d = .08, type = 'triangle', v = .05, when = 0){
     o.connect(g).connect(actx.destination); o.start(t); o.stop(t + d + .02);
   } catch {}
 }
+let noise = null;
+function boom(v = .12, d = .28){
+  if (!P.sound) return;
+  try {
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    if (!noise){ noise = actx.createBuffer(1, actx.sampleRate*.5, actx.sampleRate); const ch = noise.getChannelData(0); for (let i = 0; i < ch.length; i++) ch[i] = Math.random()*2 - 1; }
+    const src = actx.createBufferSource(), g = actx.createGain(), f = actx.createBiquadFilter(), t = actx.currentTime;
+    src.buffer = noise; f.type = 'lowpass'; f.frequency.setValueAtTime(900, t); f.frequency.exponentialRampToValueAtTime(90, t + d);
+    g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(.0001, t + d);
+    src.connect(f).connect(g).connect(actx.destination); src.start(t); src.stop(t + d);
+  } catch {}
+}
+const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+function shake(v){ if (M && !still) M.shake = Math.max(M.shake || 0, v); }
 function tick(side){ const n = performance.now(); if (n - lastTick < 70) return; lastTick = n; tone(side ? 190 : 520 + Math.random()*120, .04, 'square', .016); }
 
 /* ---------- match ---------- */
@@ -434,32 +514,33 @@ function newMatch(idle){
   let foe = who.cards.filter(k => CARDS[k].unlock <= n + 1);
   if (!foe.some(k => UNITS[k])) foe.push('sentry');
   foe = foe.concat(foe.filter(k => UNITS[k]), n < 3 ? ['sentry', 'sentry'] : []);
-  M = { boss, who, share:.5, coach:!idle && !P.tut && n === 1 ? 0 : 3, tw:new Int8Array(N).fill(-1), idle:!!idle, over:false, t:TIME, sel:-1, cur:{ x:COLS/2, y:ROWS - 8 },
+  M = { boss, who, share:.5, coach:!idle && !P.tut && n === 1 ? 0 : DONE, coachT:0, shake:0, floats:[], gunsLost:0, gunsKilled:0, played:0, srT:0, tw:new Int8Array(N).fill(-1), idle:!!idle, over:false, t:TIME, sel:-1, cur:{ x:COLS/2, y:ROWS - 8 },
     owner, hp, mine, flash, lost:[[], []], note:null, bullets:[], units:[], beams:[], shells:[], puffs:[], temps:[], last:[null, null],
     gq:shuffle(P.guns), fq:shuffle(P.fx), foe, foeNext:foe.find(k => UNITS[k]), handKey:'',
     sides:[
       { rate:1 + .07*P.up.rapid, flow:.8*(1 + .1*P.up.dynamo), energy:5, over:0, frozen:0, shield:0, cap:0, heavy:0, wide:0, lock:0 },
-      { rate:Math.min(1.15, .65 + .04*n), flow:Math.min(.78, .26 + .04*n), energy:2, over:0, frozen:0, shield:0, cap:0, heavy:0, wide:0, lock:0 }
+      { rate:Math.min(1.15, .65 + .04*n), flow:Math.min(.78, .26 + .04*n)*who.tune, energy:2, over:0, frozen:0, shield:0, cap:0, heavy:0, wide:0, lock:0 }
     ] };
   const put = (side, type, c, back, mul = 1) => addUnit(side, type, c + .5, base(side) + fwd(side)*back + .5, mul);
   if (idle){ for (const side of [0, 1]){ put(side, 'sweeper', 5, 5, 50); put(side, 'sentry', 11, 3, 50); put(side, 'sweeper', 16, 5, 50); } }
   else { M.note = { text:'vs ' + who.name, side:1, t:2 }; put(0, 'sentry', 11, 4); put(1, 'sentry', 10, 4); if (boss){ put(1, 'bastion', 5, 6, 1.5); put(1, 'bastion', 16, 6, 1.5); } }
 }
+const gunsOf = side => M.units.filter(u => u.side === side && UNITS[u.type]);
 function addUnit(side, type, x, y, pw = 1, hpSet){
-  const own = M.units.filter(u => u.side === side);
-  if (own.length >= MAXUNITS) kill(own.reduce((a, b) => a.hp/a.max <= b.hp/b.max ? a : b), true);
-  const max = hpSet || Math.round(UNITS[type].hp*pw);
-  M.units.push({ side, type, x, y, hp:max, max, cd:.3, t:Math.random()*3, ang:0, frz:0, hit:0, alt:1 });
+  const own = gunsOf(side);
+  if (UNITS[type] && own.length >= MAXUNITS) kill(own.reduce((a, b) => a.hp/a.max <= b.hp/b.max ? a : b), true);
+  const max = hpSet || Math.round(hpOf(type)*pw);
+  M.units.push({ side, type, x, y, hp:max, max, cd:.3, t:Math.random()*3, ang:0, frz:0, hit:0, alt:1, acc:0, accT:0, fly:!!(MOB[type] && MOB[type].fly) });
 }
 function kill(u, quiet){
   const at = M.units.indexOf(u); if (at < 0) return;
   M.units.splice(at, 1); M.puffs.push({ x:u.x, y:u.y, t:.4, side:u.side });
-  if (!quiet) tone(120, .2, 'sawtooth', .05);
+  if (!quiet){ boom(.1, .3); if (UNITS[u.type]){ shake(.2); if (u.side === 0) M.gunsLost++; else M.gunsKilled++; } }
 }
-const unitAt = i => M.units.find(u => Math.floor(u.y)*COLS + Math.floor(u.x) === i);
+const unitAt = i => M.units.find(u => !u.fly && Math.floor(u.y)*COLS + Math.floor(u.x) === i);
 function hurt(u, dmg, by){
-  u.hp -= dmg; u.hit = .18;
-  if (u.hp <= 0){ kill(u); const i = Math.floor(u.y)*COLS + Math.floor(u.x); if (M.owner[i] === 1 - by) flip(i, by); }
+  u.hp -= dmg; u.hit = .18; u.acc += dmg;
+  if (u.hp <= 0){ M.floats.push({ x:u.x, y:u.y, text:'-' + u.acc, t:.7 }); kill(u); const i = Math.floor(u.y)*COLS + Math.floor(u.x); if (!u.fly && inb(Math.floor(u.x), Math.floor(u.y)) && M.owner[i] === 1 - by) flip(i, by); }
 }
 function flip(i, side){
   if (M.owner[i] === 2) return;
@@ -518,6 +599,7 @@ function fireUnit(u){
     let best = -1, bd = 30;
     M.bullets.forEach((b, q) => { if (b.side === u.side) return; const d = (b.x - u.x)**2 + (b.y - u.y)**2; if (d < bd){ bd = d; best = q; } });
     if (best >= 0){ const b = M.bullets[best]; M.puffs.push({ x:b.x, y:b.y, t:.15, side:u.side }); M.bullets.splice(best, 1); }
+    else { const v = M.units.find(q => q.fly && q.side !== u.side && (q.x - u.x)**2 + (q.y - u.y)**2 < 30); if (v){ M.beams.push({ x0:u.x, y0:u.y, x1:v.x, y1:v.y, side:u.side, t:.15, w:.4 }); hurt(v, 1, u.side); } }
   }
   else if (k === 'mender'){ for (const v of M.units) if (v.side === u.side && v !== u && v.hp < v.max && (v.x - u.x)**2 + (v.y - u.y)**2 <= 36){ v.hp++; M.puffs.push({ x:v.x, y:v.y, t:.2, side:u.side }); } }
   else if (k === 'hunter'){
@@ -528,13 +610,41 @@ function fireUnit(u){
   else bullet(u.side, u.x, u.y, u.ang, U.speed);
 }
 
+/* Troops and dragons move on their own each frame. */
+function moveMob(u, dt){
+  const T = MOB[u.type], f = fwd(u.side);
+  u.cd -= dt;
+  if (T.fly){
+    u.y += f*T.spd*dt;
+    if (T.frost) for (const v of M.units) if (v.side !== u.side && UNITS[v.type] && (v.x - u.x)**2 + (v.y - u.y)**2 <= 16) v.frz = Math.max(v.frz, 1.5);
+    if (u.cd <= 0){ u.cd = T.gap; const r = Math.floor(u.y + f*1.5); if (inb(Math.floor(u.x), r)) blast(u.side, Math.floor(u.x), r, T.rad, 2); }
+    if (u.y < -1.5 || u.y > ROWS + 1.5){ const at = M.units.indexOf(u); if (at >= 0) M.units.splice(at, 1); }
+    return;
+  }
+  const c = Math.floor(u.x), r = Math.floor(u.y), nr = r + f;
+  if (!inb(c, nr)) return;                       // reached the far edge: hold the tile
+  const i = nr*COLS + c, o = M.owner[i], wall = o === 2 && M.tw[i] !== u.side, ahead = unitAt(i);
+  if (!wall && (o === u.side || o === 2) && !(ahead && ahead !== u)){ u.y += f*T.spd*dt; return; }
+  if (u.cd > 0) return;
+  u.cd = T.gap;
+  if (wall || (ahead && ahead.side === u.side)){  // blocked by a wall or a friend: step sideways if there is room
+    const dc = Math.random() < .5 ? -1 : 1, j = r*COLS + c + dc;
+    if (inb(c + dc, r) && M.owner[j] === u.side && !unitAt(j)) u.x += dc;
+    return;
+  }
+  if (T.boom && ahead && ahead.side !== u.side && UNITS[ahead.type]){ blast(u.side, c, nr, 3, 8); boom(.14, .35); shake(.3); kill(u, true); return; }
+  for (let dc = -T.w; dc <= T.w; dc++) if (inb(c + dc, nr)) strike(nr*COLS + c + dc, u.side, T.dmg);
+}
+
 /* ---------- cards ---------- */
 /* Returns '' when the card can be played at (x, y), else a short reason. */
 function valid(side, id, x, y){
   const C = CARDS[id], i = Math.floor(y)*COLS + Math.floor(x);
   if (C.aim === 'own'){
     if (M.owner[i] !== side) return 'Place it on your own ground';
-    if (UNITS[id] && M.units.some(u => (u.x - x)**2 + (u.y - y)**2 < 7)) return 'Too close to another cannon';
+    if (UNITS[id] && M.units.some(u => UNITS[u.type] && (u.x - x)**2 + (u.y - y)**2 < 7)) return 'Too close to another cannon';
+    if (UNITS[id] && side === 0 && gunsOf(0).length >= MAXUNITS) return `Limit of ${MAXUNITS}: tap a cannon to scrap it`;
+    if (MOB[id] && unitAt(i)) return 'That tile is taken';
   }
   if ((id === 'sabotage' || id === 'hijack' || id === 'frost') && !nearestUnit(1 - side, x, y, C.r)) return 'No rival cannon there';
   if (id === 'echo' && !M.last[side]) return 'Nothing to repeat yet';
@@ -543,11 +653,13 @@ function valid(side, id, x, y){
 }
 function cast(side, id, x, y){
   const S = M.sides[side], O = M.sides[1 - side], c = Math.floor(x), r = Math.floor(y), f = fwd(side);
-  const pw = side === 0 ? 1 + .25*(P.rank[id] || 0) : 1, rk = Math.round((pw - 1)*4), R = v => Math.round(v*pw);
-  if (UNITS[id]) addUnit(side, id, c + .5, r + .5, pw);
+  const pw = side === 0 ? lvPow(P.rank[id] || 0) : 1, rk = Math.round((pw - 1)*4), R = v => Math.round(v*pw);
+  if (side === 0) M.played++;
+  if (id === 'squad'){ for (const dc of [-2, 0, 2]){ const j = r*COLS + c + dc; if (inb(c + dc, r) && M.owner[j] === side && !unitAt(j)) addUnit(side, 'grunt', c + dc + .5, r + .5, pw); } }
+  else if (isForce(id)) addUnit(side, id, c + .5, r + .5, pw);
   else if (id === 'trench'){ for (let k = 0; k < R(8); k++) for (let dc = -1; dc <= 1; dc++) if (inb(c + dc, r + f*k)) strike((r + f*k)*COLS + c + dc, side, 3); }
   else if (id === 'wedge'){ for (let k = 0; k < R(7); k++){ const h = Math.floor(k*.6); for (let dc = -h; dc <= h; dc++) if (inb(c + dc, r + f*k)) strike((r + f*k)*COLS + c + dc, side, 3); } }
-  else if (id === 'splash') blast(side, c, r, 3 + (rk >= 2 ? 1 : 0), 4);
+  else if (id === 'splash'){ blast(side, c, r, 3 + (rk >= 2 ? 1 : 0), 4); boom(.1, .25); shake(.2); }
   else if (id === 'crossfire'){ for (let k = 0; k < 2 + (rk >= 2 ? 1 : 0); k++) if (inb(0, r + f*k)) for (let cc = 0; cc < COLS; cc++) strike((r + f*k)*COLS + cc, side, 2); }
   else if (id === 'barrage'){ for (let cc = 0; cc < COLS; cc++) bullet(side, cc + .5, base(side) + .5, 0, 24, rk); }
   else if (id === 'tide'){
@@ -566,7 +678,7 @@ function cast(side, id, x, y){
   else if (id === 'meteor'){
     const foes = []; for (let i = 0; i < N; i++) if (M.owner[i] === 1 - side) foes.push(i);
     for (let k = 0; k < R(6) && foes.length; k++){ const i = foes[Math.floor(Math.random()*foes.length)]; blast(side, i % COLS, Math.floor(i/COLS), 2, 3); }
-    tone(90, .3, 'sine', .07);
+    boom(.16, .5); shake(.4);
   }
   else if (id === 'beachhead'){ blast(side, c, r, 2, 3); if (M.owner[r*COLS + c] === side && !unitAt(r*COLS + c)) addUnit(side, 'sentry', c + .5, r + .5, 1, R(6)); }
   else if (id === 'reclaim'){ const L = M.lost[side]; let left = R(30); while (L.length && left){ const i = L.pop(); if (M.owner[i] === 1 - side && !unitAt(i)){ flip(i, side); left--; } } }
@@ -594,10 +706,10 @@ function cast(side, id, x, y){
   else if (id === 'sabotage'){ const u = nearestUnit(1 - side, x, y, CARDS[id].r); if (u) hurt(u, R(10), side); }
   else if (id === 'hijack'){
     const u = nearestUnit(1 - side, x, y, CARDS[id].r);
-    if (u){ u.side = side; u.max = Math.round(UNITS[u.type].hp*pw); u.hp = u.max; const i = Math.floor(u.y)*COLS + Math.floor(u.x); M.owner[i] = side; M.flash[i] = 1; blast(side, Math.floor(u.x), Math.floor(u.y), 2); }
+    if (u){ u.side = side; u.max = Math.round(hpOf(u.type)*pw); u.hp = u.max; const i = Math.floor(u.y)*COLS + Math.floor(u.x); if (!u.fly && inb(Math.floor(u.x), Math.floor(u.y))){ M.owner[i] = side; M.flash[i] = 1; blast(side, Math.floor(u.x), Math.floor(u.y), 2); } }
   }
   else if (id === 'echo'){ const L = M.last[side]; if (L){ cast(side, L.id, L.x, L.y); M.note = { text:'Echo: ' + CARDS[L.id].name, side, t:1.4 }; } return; }
-  if (!UNITS[id]) M.last[side] = { id, x, y };
+  if (!isForce(id)) M.last[side] = { id, x, y };
   M.note = { text:CARDS[id].name, side, t:1.4 };
   tone(side ? 240 : 660, .16, 'triangle', .05); tone(side ? 180 : 990, .18, 'sine', .04, .07);
 }
@@ -608,6 +720,10 @@ function spend(k, x, y){
   const say = text => { M.note = { text, side:0, t:1 }; tone(150, .1, 'sine', .04); return false; };
   if (!card) return false;
   if (S.lock > 0) return say('Locked down');
+  if (UNITS[id] && gunsOf(0).length >= MAXUNITS){
+    const old = gunsOf(0).find(u => (u.x - x)**2 + (u.y - y)**2 < 3);
+    if (old){ kill(old, true); M.note = { text:'Scrapped. Now place it', side:0, t:1.2 }; return false; }
+  }
   if (S.energy < card.cost) return say(`Need ${card.cost} energy`);
   const why = valid(0, id, x, y); if (why) return say(why);
   S.energy -= card.cost;
@@ -626,7 +742,7 @@ function rival(){
   const R = M.sides[1], id = M.foeNext, C = CARDS[id];
   if (R.frozen > 0 || R.lock > 0 || R.energy < C.cost) return;
   const again = () => { M.foeNext = M.foe[Math.floor(Math.random()*M.foe.length)]; };
-  const theirs = M.units.filter(u => u.side === 1);
+  const theirs = gunsOf(1);
   if (UNITS[id] && theirs.length >= MAXUNITS && theirs.every(u => u.hp/u.max > .5)){ again(); return; }
   let best = 0, bv = -1;
   for (let c = 0; c < COLS; c++){ let k = 0; for (let r = 0; r < ROWS; r++) if (!M.owner[r*COLS + c]) k++; const v = k + Math.random()*10; if (v > bv){ bv = v; best = c; } }
@@ -646,12 +762,15 @@ function rival(){
   R.energy -= C.cost; cast(1, id, x, y); again();
 }
 function step(dt){
-  if (M.coach < 3){
+  if (M.coach < DONE){
     const pick = slot(M.sel);
     if (M.coach < 2 && M.units.filter(u => u.side === 0).length > 1) M.coach = 2;
-    else if (M.coach < 2) M.coach = pick && UNITS[pick] ? 1 : 0;
-    else if (M.last[0]){ M.coach = 3; P.tut = true; store.set(P); M.note = { text:'You have it', side:0, t:1.6 }; }
+    else if (M.coach < 2) M.coach = pick && isForce(pick) ? 1 : 0;
+    else if (M.coach === 2){ if (M.last[0]){ M.coach = 3; M.coachT = 6; } }
+    else { M.coachT -= dt; if (M.coachT <= 0){ M.coach++; M.coachT = 6; if (M.coach === DONE){ P.tut = true; store.set(P); M.note = { text:'You have it', side:0, t:1.6 }; } } }
   }
+  if (M.shake > 0) M.shake -= dt;
+  for (let k = M.floats.length - 1; k >= 0; k--){ M.floats[k].t -= dt; if (M.floats[k].t <= 0) M.floats.splice(k, 1); }
   if (!M.idle && M.coach >= 2){ M.t -= dt; rival(); }
   M.sides.forEach((S, side) => {
     for (const k of ['over','frozen','shield','cap','heavy','wide','lock']) if (S[k] > 0) S[k] -= dt;
@@ -663,7 +782,9 @@ function step(dt){
     const u = M.units[k], S = M.sides[u.side];
     if (u.hit > 0) u.hit -= dt;
     if (u.frz > 0) u.frz -= dt;
+    if (u.acc > 0){ u.accT -= dt; if (u.accT <= 0){ M.floats.push({ x:u.x, y:u.y, text:'-' + u.acc, t:.7 }); u.acc = 0; u.accT = .45; } }
     if (S.frozen > 0 || u.frz > 0) continue;
+    if (MOB[u.type]){ moveMob(u, dt); continue; }
     u.t += dt;
     if (u.type === 'sweeper') u.ang = Math.sin(u.t*1.7)*.95; else if (u.type === 'spinner') u.ang = u.t*3.2;
     u.cd -= dt; if (u.cd <= 0){ u.cd = UNITS[u.type].gap/(S.rate*(S.over > 0 ? 2 : 1)); fireUnit(u); }
@@ -674,10 +795,14 @@ function step(dt){
     if (b.x < 0){ b.x = -b.x; b.vx = -b.vx; } else if (b.x > COLS){ b.x = 2*COLS - b.x; b.vx = -b.vx; }
     const r = Math.floor(b.y), c = clamp(Math.floor(b.x), 0, COLS - 1);
     if (r < 0 || r >= ROWS || b.ttl <= 0){ M.bullets.splice(k, 1); continue; }
+    const fl = M.units.find(u => u.fly && u.side !== b.side && (u.x - b.x)**2 + (u.y - b.y)**2 < 1.6);
+    if (fl){ hurt(fl, 1, b.side); M.bullets.splice(k, 1); continue; }
     const i = r*COLS + c, o = M.owner[i];
     if (o === b.side || (o === 2 && M.tw[i] === b.side)) continue;
     let dead = true;
     if (o !== 2 && strike(i, b.side)){
+      // a shot that takes ground within 3 tiles of a rival cannon also chips that cannon
+      for (const u of M.units) if (u.side !== b.side && UNITS[u.type] && (u.x - b.x)**2 + (u.y - b.y)**2 <= 9 && M.sides[u.side].shield <= 0){ hurt(u, 1, b.side); break; }
       if (M.sides[b.side].wide > 0){ if (c > 0) strike(i - 1, b.side); if (c < COLS - 1) strike(i + 1, b.side); }
       dead = --b.pierce < 0;
     }
@@ -698,11 +823,15 @@ function finish(s){
   const won = s > .5, pct = Math.round(s*100), fresh = P.level >= P.best;
   const stars = !won ? 0 : s >= .8 ? 3 : s >= .65 ? 2 : 1;
   const earned = won ? (30 + 6*P.level + Math.round((s - .5)*80) + 10*(stars - 1))*(M.boss ? 2 : 1) : 8 + Math.round(s*20);
-  const paid = fresh ? earned : Math.round(earned/2);
+  const goal = goalFor(P.level), hitGoal = won && !P.goals[P.level] && goal.test(M, s);
+  P.streak = won ? (P.streak || 0) + 1 : 0;
+  const bonus = (hitGoal ? goalPay(P.level) : 0) + (won ? Math.min(25, 5*(P.streak - 1)) : 0) + (won && fresh ? 20 : 0);
+  if (hitGoal) P.goals[P.level] = true;
+  const paid = (fresh ? earned : Math.round(earned/2)) + bonus;
   P.coins += paid; P.stars[P.level] = Math.max(P.stars[P.level] || 0, stars);
   $('over-stars').textContent = '★'.repeat(stars) + '☆'.repeat(3 - stars);
   $('over-title').textContent = won ? (s >= .88 ? 'Clean sweep' : 'Stage cleared') : s === .5 ? 'Dead heat' : 'Line lost';
-  $('over-sub').textContent = `You held ${pct}% of the field and salvaged ${paid} scrap` + (fresh ? '.' : ' (half pay for a replay).') + (won ? '' : ' Spend it in the workshop and try again.');
+  $('over-sub').textContent = `You held ${pct}% of the field and earned ${paid} coins` + (fresh ? '.' : ' (half pay for a replay).') + (hitGoal ? ` Goal met: +${goalPay(P.level)}.` : '') + (won && P.streak > 1 ? ` Win streak of ${P.streak}: +${Math.min(25, 5*(P.streak - 1))}.` : '') + (won ? '' : ' Spend them on card levels and try again.');
   $('over-next').textContent = won ? 'Next stage' : 'Retry';
   if (won){ if (fresh) P.best = P.level + 1; P.level = Math.min(P.best, P.level + 1); [523,659,784,1047].forEach((f, i) => tone(f, .2, 'triangle', .06, i*.1)); }
   else [392,330,262].forEach((f, i) => tone(f, .24, 'sine', .06, i*.13));
@@ -729,6 +858,22 @@ function pic(id, color){
   return im.complete && im.naturalWidth ? im : null;
 }
 function rr(x, y, w, h, q){ ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x, y, w, h, q) : ctx.rect(x, y, w, h); }
+function drawMob(u, col, fg, bg, ice){
+  const { t, gx, gy } = geo, S = M.sides[u.side], T = MOB[u.type], x = gx + u.x*t, y = gy + u.y*t, c = S.frozen > 0 || u.frz > 0 ? ice : col;
+  const R = T.fly ? t*(u.type === 'elder' ? 2.3 : 1.7) : t*(u.type === 'brute' ? 1.15 : .85);
+  ctx.save(); ctx.translate(x, y);
+  if (T.fly){ ctx.globalAlpha = .28; ctx.fillStyle = '#000'; ctx.beginPath(); ctx.ellipse(t*.9, t*1.1, R*.9, R*.55, 0, 0, 7); ctx.fill(); ctx.globalAlpha = 1; }
+  ctx.beginPath();
+  if (T.fly){ ctx.moveTo(0, -R); ctx.lineTo(R, 0); ctx.lineTo(0, R); ctx.lineTo(-R, 0); ctx.closePath(); } else if (ctx.roundRect) ctx.roundRect(-R, -R, 2*R, 2*R, R*.35); else ctx.rect(-R, -R, 2*R, 2*R);
+  ctx.fillStyle = fg; ctx.fill(); ctx.lineJoin = 'round'; ctx.lineWidth = Math.max(2, t*.22); ctx.strokeStyle = c; ctx.stroke();
+  const im = pic(u.type, c), sz = R*(T.fly ? 1.25 : 1.5);
+  if (im){ ctx.save(); if (u.side) ctx.scale(1, -1); ctx.drawImage(im, -sz/2, -sz/2, sz, sz); ctx.restore(); }
+  if (u.hit > 0){ ctx.globalAlpha = u.hit*4; ctx.fillStyle = '#fff'; ctx.fill(); ctx.globalAlpha = 1; }
+  // health bar
+  const w = Math.max(R*1.8, t*1.8), yy = -R - t*.55;
+  ctx.fillStyle = bg; ctx.fillRect(-w/2 - 1, yy - 1, w + 2, t*.3 + 2); ctx.fillStyle = c; ctx.fillRect(-w/2, yy, w*clamp(u.hp/u.max, 0, 1), t*.3);
+  ctx.restore();
+}
 function drawUnit(u, col, fg, bg, ice, line){
   const { t, gx, gy } = geo, S = M.sides[u.side], x = gx + u.x*t, y = gy + u.y*t, R = t*1.3, c = S.frozen > 0 || u.frz > 0 ? ice : col;
   ctx.save(); ctx.translate(x, y);
@@ -742,7 +887,11 @@ function drawUnit(u, col, fg, bg, ice, line){
   else { ctx.strokeStyle = c; ctx.lineWidth = t*.3; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, fwd(u.side)*R*.7); ctx.stroke(); }
   if (u.type === 'sweeper' || u.type === 'spinner'){ ctx.fillStyle = c; ctx.beginPath(); ctx.arc(Math.sin(u.ang)*(R + t*.55), fwd(u.side)*Math.cos(u.ang)*(R + t*.55), t*.24, 0, 7); ctx.fill(); }
   if (S.over > 0){ ctx.strokeStyle = c; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(0, 0, R + t*.6, 0, 7); ctx.stroke(); }
-  if (u.hit > 0){ ctx.globalAlpha = u.hit*4; ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(0, 0, R, 0, 7); ctx.fill(); }
+  if (u.hit > 0){ ctx.globalAlpha = u.hit*4; ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(0, 0, R, 0, 7); ctx.fill(); ctx.globalAlpha = 1; }
+  if (u.hp < u.max){ // damaged cannons show their health as a number
+    const size = Math.max(10, Math.round(t*.95)); ctx.font = `800 ${size}px "Nunito Sans", system-ui, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.lineWidth = 3; ctx.lineJoin = 'round'; ctx.strokeStyle = bg; ctx.strokeText(Math.max(0, u.hp), 0, -R - size*.75); ctx.fillStyle = fg; ctx.fillText(Math.max(0, u.hp), 0, -R - size*.75);
+  }
   ctx.restore();
 }
 function draw(){
@@ -750,6 +899,7 @@ function draw(){
   const col = [v('--a'), v('--b'), v('--line')], fg = v('--fg'), bg = v('--bg'), ice = v('--ice'), panel = v('--panel'), line = v('--line');
   const { t, gx, gy, dpr } = geo, W = COLS*t, H = ROWS*t;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, geo.w, geo.h);
+  if (M.shake > 0) ctx.translate((Math.random() - .5)*14*M.shake, (Math.random() - .5)*14*M.shake);
   // frame
   rr(gx - 4, gy - 4, W + 8, H + 8, 12); ctx.fillStyle = panel; ctx.fill(); ctx.strokeStyle = line; ctx.lineWidth = 1; ctx.stroke();
   ctx.save(); rr(gx, gy, W, H, 8); ctx.clip();
@@ -796,7 +946,15 @@ function draw(){
   }
   ctx.lineWidth = Math.max(1, t*.12);
   for (const b of M.bullets){ ctx.beginPath(); ctx.arc(gx + b.x*t, gy + b.y*t, Math.max(2.5, t*.34), 0, 7); ctx.fillStyle = col[b.side]; ctx.fill(); ctx.strokeStyle = fg; ctx.stroke(); }
-  for (const u of M.units) drawUnit(u, col[u.side], fg, bg, ice, line);
+  for (const u of M.units) if (!MOB[u.type]) drawUnit(u, col[u.side], fg, bg, ice, line);
+  for (const u of M.units) if (MOB[u.type] && !u.fly) drawMob(u, col[u.side], fg, bg, ice);
+  for (const u of M.units) if (u.fly) drawMob(u, col[u.side], fg, bg, ice);
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
+  for (const q of M.floats){
+    const size = Math.max(11, Math.round(t*1.1)); ctx.globalAlpha = clamp(q.t*2.5, 0, 1); ctx.font = `800 ${size}px "Nunito Sans", system-ui, sans-serif`;
+    const yy = gy + q.y*t - t*2 - (0.7 - q.t)*t*2; ctx.lineWidth = 3; ctx.strokeStyle = bg; ctx.strokeText(q.text, gx + q.x*t, yy); ctx.fillStyle = col[1]; ctx.fillText(q.text, gx + q.x*t, yy);
+  }
+  ctx.globalAlpha = 1;
   for (const q of M.shells){
     const p = q.t/q.dur, x = gx + (q.x0 + (q.x1 - q.x0)*p)*t, y = gy + (q.y0 + (q.y1 - q.y0)*p)*t;
     ctx.beginPath(); ctx.arc(x, y, t*(.4 + .5*Math.sin(Math.PI*p)), 0, 7); ctx.fillStyle = col[q.side]; ctx.fill(); ctx.strokeStyle = fg; ctx.stroke();
@@ -810,6 +968,7 @@ function draw(){
     else if (id === 'crossfire') ctx.rect(gx, gy + (r - 1)*t, W, 2*t);
     else if (id === 'barricade') ctx.rect(gx + (c - 2)*t, gy + r*t, 5*t, t);
     else if (id === 'wedge'){ ctx.moveTo(gx + (c + .5)*t, gy + (r + 1)*t); ctx.lineTo(gx + (c - 3)*t, gy + (r - 6)*t); ctx.lineTo(gx + (c + 4)*t, gy + (r - 6)*t); ctx.closePath(); }
+    else if (MOB[id] && !MOB[id].boom){ const w = MOB[id].fly ? MOB[id].rad + .5 : MOB[id].w + .5; ctx.rect(gx + (c + .5 - w)*t, gy, 2*w*t, (r + 1)*t); }
     else ctx.arc(gx + (c + .5)*t, gy + (r + .5)*t, (UNITS[id] && C.r === 1 ? 1.3 : C.r || 1)*t + t*.5, 0, 7);
     ctx.stroke(); ctx.globalAlpha = bad ? .06 : .16; ctx.fill(); ctx.globalAlpha = 1; ctx.setLineDash([]);
     if (aiming){ // guide lines so the target stays visible around a finger
@@ -835,15 +994,15 @@ function hud(){
   const secs = Math.max(0, Math.ceil(M.t)); $('clock').textContent = secs; $('clock').classList.toggle('low', !M.idle && secs <= 10);
   $('energy').style.width = (A.energy*10) + '%';
   $('energy-n').textContent = Math.floor(A.energy);
-  const key = M.gq.slice(0, HG).join() + '|' + M.fq.slice(0, HF + 1).join() + M.sel + M.idle + M.coach;
+  const key = M.gq.slice(0, HG).join() + '|' + M.fq.slice(0, HF + 1).join() + M.sel + M.idle + M.coach + gunsOf(0).length;
   if (key !== M.handKey){
     M.handKey = key;
-    for (let k = 0; k < HAND; k++){ const id = slot(k), c = CARDS[id]; $('pow-' + k).innerHTML = c ? `${ic(id)}<i class="cost">${c.cost}</i><b>${c.name}</b><span class="meter"><span></span></span>` : ''; $('pow-' + k).setAttribute('aria-label', c ? `${c.name}, ${c.cost} energy. ${c.desc}` : 'Empty'); }
+    for (let k = 0; k < HAND; k++){ const id = slot(k), c = CARDS[id]; $('pow-' + k).className = 'card ' + lookOf(id); $('pow-' + k).innerHTML = c ? `${ic(id)}<u>L${(P.rank[id] || 0) + 1}</u><i class="cost">${c.cost}</i><b>${c.name}</b><span class="meter"><span></span></span>` : ''; $('pow-' + k).setAttribute('aria-label', c ? `${c.name}, ${c.cost} energy. ${c.desc}` : 'Empty'); }
     const sel = CARDS[slot(M.sel)], next = CARDS[M.fq[HF]];
-    const coach = ['Step 1 of 3: tap a cannon card on the left.', 'Step 2 of 3: press on your own ground, drag to aim, let go to build.', 'Step 3 of 3: now play an effect card from the right.'][M.coach];
+    const coach = ['Step 1 of 5: tap a card on the left. Those are your forces.', 'Step 2 of 5: press on your own ground, drag to aim, let go to place it.', 'Step 3 of 5: now play an effect card from the right.', 'Step 4 of 5: the ring round a cannon is its health. Shots landing near it wear it down.', 'Step 5 of 5: the gold bar is energy. Fall behind and it fills faster.'][M.coach];
     $('foe-name').textContent = M.who.name;
     $('hint').classList.toggle('coach', !!coach && !M.idle);
-    $('hint').textContent = M.idle ? '' : coach ? coach : sel ? `${sel.name}: ${sel.desc}. ` + (sel.aim === 'own' ? 'Press on your own ground, drag, let go.' : 'Press on the board, drag, let go.') : 'Pick a card. Cannons stay until destroyed; effects happen once.' + (next ? ' Next effect: ' + next.name + '.' : '');
+    $('hint').textContent = M.idle ? '' : coach ? coach : sel ? `${sel.name}: ${sel.desc}. ` + (sel.aim === 'own' ? 'Press on your own ground, drag, let go.' : 'Press on the board, drag, let go.') : `Pick a card, or hold one to read it. Cannons ${gunsOf(0).length}/${MAXUNITS}.` + (next ? ' Next effect: ' + next.name + '.' : '');
   }
   for (let k = 0; k < HAND; k++){
     const c = CARDS[slot(k)], b = $('pow-' + k), can = c && !M.idle && !M.over && A.lock <= 0 && A.energy >= c.cost;
@@ -856,6 +1015,7 @@ let last = 0;
 function frame(now){
   const dt = Math.min(.033, (now - last)/1000 || 0); last = now;
   if (M && !M.over && !paused) step(dt);
+  if (M && live()){ M.srT -= dt; if (M.srT <= 0){ M.srT = 6; $('sr').textContent = `You hold ${Math.round(M.share*100)} percent. ${Math.max(0, Math.ceil(M.t))} seconds left. ${gunsOf(0).length} cannons standing, ${gunsOf(1).length} rival cannons. ${Math.floor(M.sides[0].energy)} energy.`; } }
   if (M){ draw(); hud(); }
   requestAnimationFrame(frame);
 }
@@ -880,7 +1040,20 @@ document.addEventListener('keydown', e => {
   else if (e.key >= '1' && e.key <= String(HAND)) power(+e.key - 1);
   else if (e.key === 'Escape' || e.key === 'p') pause(!paused);
 });
-for (let k = 0; k < HAND; k++) $('pow-' + k).addEventListener('click', () => power(k));
+let held = false, holdT = 0;
+function showTip(k){
+  const id = slot(k), c = CARDS[id]; if (!c) return;
+  const r = P.rank[id] || 0, st = stat(id, r);
+  $('tip').innerHTML = `<b>${c.name} · ${c.kind} · ${c.cost} energy · level ${r + 1}</b><small>${c.desc}.${st ? ' Now: ' + st + '.' : ''} ${c.aim === 'none' ? 'Plays the moment you tap it.' : c.aim === 'own' ? 'Goes on your own ground.' : 'Aim it anywhere.'}</small>`;
+  $('tip').hidden = false; held = true;
+}
+for (let k = 0; k < HAND; k++){
+  const b = $('pow-' + k);
+  b.addEventListener('pointerdown', () => { held = false; clearTimeout(holdT); holdT = setTimeout(() => showTip(k), 380); });
+  for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) b.addEventListener(ev, () => { clearTimeout(holdT); $('tip').hidden = true; });
+  b.addEventListener('click', () => { if (held){ held = false; return; } power(k); });
+  b.addEventListener('contextmenu', e => e.preventDefault());
+}
 function pause(on){
   if (!M || M.idle || M.over) return;
   paused = on; $('dlg-pause').hidden = !on;
@@ -888,9 +1061,9 @@ function pause(on){
 document.addEventListener('visibilitychange', () => { if (document.hidden) pause(true); });
 
 /* ---------- saving a match in progress ---------- */
-const MKEY = 'flipfire.match2';
+const MKEY = 'flipfire.match3';
 function saveMatch(){
-  if (!live() || M.coach < 3) return;
+  if (!live() || M.coach < DONE) return;
   try { localStorage.setItem(MKEY, JSON.stringify({ ...M, level:P.level, owner:Array.from(M.owner), hp:Array.from(M.hp), mine:Array.from(M.mine), tw:Array.from(M.tw), flash:0 })); } catch {}
 }
 function clearMatch(){ try { localStorage.removeItem(MKEY); } catch {} }
@@ -907,13 +1080,13 @@ function loadMatch(){
 let wipe = false;
 function chrome(){
   $('tag-level').textContent = 'Stage ' + P.level;
-  $('tag-coins').textContent = P.coins + ' scrap';
+  $('tag-coins').textContent = P.coins + ' coins';
 }
 function cardRow(k){
-  const c = CARDS[k], gun = !!UNITS[k], list = gun ? P.guns : P.fx, cap = gun ? NG : NF;
+  const c = CARDS[k], gun = isForce(k), list = gun ? P.guns : P.fx, cap = gun ? NG : NF;
   const open = P.best >= c.unlock, on = list.includes(k), r = P.rank[k] || 0, full = r >= MAXRANK || !!c.norank, st = stat(k, r);
-  return `<div class="cardrow"><button class="opt${on ? ' sel' : ''}" data-card="${k}" ${open && (on || list.length < cap) ? '' : 'disabled'}>${ic(k)}<div><b>${c.name} · ${c.cost}</b><small>${c.desc}</small>${st ? `<small class="st">${st}${full ? '' : ' → ' + stat(k, r + 1)}</small>` : ''}</div><em>${!open ? 'Stage ' + c.unlock : on ? 'In deck' : 'Add'}</em></button>`
-    + `<button class="rk" data-rank="${k}" aria-label="Raise ${c.name} rank" ${open && !full && P.coins >= rcost(r) ? '' : 'disabled'}>${c.norank ? 'No ranks' : 'Rank ' + (r + 1)}<small class="num">${c.norank ? '–' : full ? 'max' : rcost(r)}</small></button></div>`;
+  return `<div class="cardrow"><button class="opt${on ? ' sel' : ''}" data-card="${k}" ${open && (on || list.length < cap) ? '' : 'disabled'}>${ic(k)}<div><b>${c.name} · ${c.cost} · L${r + 1}</b><small>${c.desc}</small>${st ? `<small class="st">${st}${full ? '' : ' → ' + stat(k, r + 1)}</small>` : ''}</div><em>${!open ? 'Stage ' + c.unlock : on ? 'In deck' : 'Add'}</em></button>`
+    + `<button class="rk" data-rank="${k}" aria-label="Level up ${c.name}" ${open && !full && P.coins >= rcost(r) ? '' : 'disabled'}>${c.norank ? 'No levels' : full ? 'Level ' + (r + 1) : 'Level up'}<small class="num">${c.norank ? '–' : full ? 'max' : rcost(r) + ' coins'}</small></button></div>`;
 }
 function home(){
   chrome();
@@ -923,28 +1096,34 @@ function home(){
   $('st-prev').disabled = P.level <= 1; $('st-next').disabled = P.level >= P.best;
   document.querySelectorAll('#tabs .tab').forEach(b => { b.classList.toggle('on', b.dataset.tab === tab); $('tab-' + b.dataset.tab).hidden = b.dataset.tab !== tab; });
   $('rival').innerHTML = `<span class="ic">${svg(who.cards[0])}</span><div><b>vs ${who.name}</b><span>${who.line}</span></div>`;
-  $('mods').innerHTML = [boss && 'Boss: two heavy Bastions, double scrap', P.level >= 3 && 'Plated tiles', P.level >= 4 && P.level % 4 && 'Walls', P.level < P.best && 'Replay: half scrap'].filter(Boolean).map(m => `<span>${m}</span>`).join('');
-  $('home-how').textContent = `Cannon cards build a gun on your own ground. It keeps firing until the rival shoots its health down to zero. Effect cards happen once: strikes land where you aim, the rest play the moment you tap them. To play a card, pick it, press on the board, drag to aim and let go. Whoever holds less ground gains energy faster. Hold more of the field after ${TIME} seconds.`;
+  $('mods').innerHTML = [boss && 'Boss: two heavy Bastions, double coins', P.level >= 3 && 'Plated tiles', P.level >= 4 && P.level % 4 && 'Walls', P.level < P.best && 'Replay: half coins', P.streak > 0 && `Win streak ${P.streak}`].filter(Boolean).map(m => `<span>${m}</span>`).join('');
+  const goal = goalFor(P.level), gdone = !!P.goals[P.level];
+  $('home-goal').className = 'goal' + (gdone ? ' done' : '');
+  $('home-goal').innerHTML = `<div><b>Stage goal</b><br>${goal.text}</div><em>${gdone ? 'Done' : '+' + goalPay(P.level) + ' coins'}</em>`;
+  $('daily').innerHTML = P.day === today() ? '' : `<button class="opt sel" data-daily="1">${ic('spark')}<div><b>Daily reward</b><small>Come back each day for more</small></div><em>Claim 60 coins</em></button>`;
+  $('home-how').innerHTML = [['sentry', 'Cannons hold ground. They fire until their health is shot down.'], ['runner', 'Troops walk up the field taking tiles. Dragons fly over everything.'], ['splash', 'Effects happen once. Strikes land where you aim.'], ['capacitor', `Energy pays for cards. Hold more ground after ${TIME} seconds to win.`]]
+    .map(([k, tx]) => `<div>${ic(k)}<span>${tx}</span></div>`).join('');
   const later = Object.values(CARDS).map(c => c.unlock).filter(u => u > P.best), nextAt = later.length ? Math.min(...later) : 0;
   $('home-next').textContent = nextAt ? `Clear stage ${nextAt - 1} to unlock ${Object.values(CARDS).filter(c => c.unlock === nextAt).map(c => c.name).join(' and ')}.` : 'Every card is unlocked.';
   const ids = Object.keys(CARDS).sort((a, b) => CARDS[a].unlock - CARDS[b].unlock);
-  $('guns-head').textContent = `Cannons · ${P.guns.length} of ${NG} chosen`;
+  $('guns-head').textContent = `Forces · ${P.guns.length} of ${NG} chosen`;
+  $('fkinds').innerHTML = FKINDS.map(k => `<button class="chipb${fkindF === k ? ' on' : ''}" data-fkind="${k}">${k}</button>`).join('');
   $('guns-strip').innerHTML = P.guns.map(ic).join('') + '<span class="gap"></span>'.repeat(NG - P.guns.length);
-  $('guns-list').innerHTML = ids.filter(k => UNITS[k]).map(cardRow).join('');
+  $('guns-list').innerHTML = ids.filter(k => isForce(k) && (fkindF === 'All' || CARDS[k].kind === fkindF)).map(cardRow).join('');
   $('fx-head').textContent = `Effects · ${P.fx.length} of ${NF} chosen`;
   $('fx-strip').innerHTML = P.fx.map(ic).join('') + '<span class="gap"></span>'.repeat(NF - P.fx.length);
   $('kinds').innerHTML = KINDS.map(k => `<button class="chipb${kindF === k ? ' on' : ''}" data-kind="${k}">${k}</button>`).join('');
-  $('fx-list').innerHTML = ids.filter(k => !UNITS[k] && (kindF === 'All' || CARDS[k].kind === kindF)).map(cardRow).join('');
+  $('fx-list').innerHTML = ids.filter(k => !isForce(k) && (kindF === 'All' || CARDS[k].kind === kindF)).map(cardRow).join('');
   const short = NG - P.guns.length, shortF = NF - P.fx.length;
   $('btn-play').disabled = !!(short || shortF);
-  $('btn-play').textContent = short ? `Pick ${short} more cannon${short > 1 ? 's' : ''}` : shortF ? `Pick ${shortF} more effect${shortF > 1 ? 's' : ''}` : 'Play';
+  $('btn-play').textContent = short ? `Pick ${short} more force${short > 1 ? 's' : ''}` : shortF ? `Pick ${shortF} more effect${shortF > 1 ? 's' : ''}` : 'Play';
   $('upgrades').innerHTML = Object.entries(UPG).map(([k, u]) => {
     const r = P.up[k], full = r >= u.max, c = cost(k, r);
-    return `<button class="opt" data-up="${k}" ${full || P.coins < c ? 'disabled' : ''}><div><b>${u.name} · rank ${r}/${u.max}</b><small>${u.desc}</small></div><em class="num">${full ? 'Maxed' : c + ' scrap'}</em></button>`;
+    return `<button class="opt" data-up="${k}" ${full || P.coins < c ? 'disabled' : ''}><div><b>${u.name} · rank ${r}/${u.max}</b><small>${u.desc}</small></div><em class="num">${full ? 'Maxed' : c + ' coins'}</em></button>`;
   }).join('');
   $('settings').innerHTML = `<button class="opt${P.sound ? ' sel' : ''}" data-set="sound"><div><b>Sound</b><small>Blips for shots, cards and results</small></div><em>${P.sound ? 'On' : 'Off'}</em></button>`
     + `<button class="opt${P.pattern ? ' sel' : ''}" data-set="pattern"><div><b>Stripe the rival's tiles</b><small>Tells the two sides apart without relying on colour</small></div><em>${P.pattern ? 'On' : 'Off'}</em></button>`
-    + `<button class="opt" data-set="reset"><div><b>${wipe ? 'Tap again to erase everything' : 'Reset progress'}</b><small>Clears stages, scrap, ranks and your decks</small></div><em>${wipe ? 'Confirm' : 'Reset'}</em></button>`;
+    + `<button class="opt" data-set="reset"><div><b>${wipe ? 'Tap again to erase everything' : 'Reset progress'}</b><small>Clears stages, coins, card levels and your decks</small></div><em>${wipe ? 'Confirm' : 'Reset'}</em></button>`;
   $('dlg-over').hidden = true; $('dlg-pause').hidden = true; $('dlg-home').hidden = false;
   paused = false; newMatch(true);
 }
@@ -953,6 +1132,8 @@ $('tabs').addEventListener('click', e => { const b = e.target.closest('[data-tab
 $('st-prev').addEventListener('click', () => { if (P.level > 1){ P.level--; store.set(P); home(); } });
 $('st-next').addEventListener('click', () => { if (P.level < P.best){ P.level++; store.set(P); home(); } });
 $('kinds').addEventListener('click', e => { const b = e.target.closest('[data-kind]'); if (!b) return; kindF = b.dataset.kind; home(); });
+$('fkinds').addEventListener('click', e => { const b = e.target.closest('[data-fkind]'); if (!b) return; fkindF = b.dataset.fkind; home(); });
+$('daily').addEventListener('click', e => { if (!e.target.closest('[data-daily]') || P.day === today()) return; P.day = today(); P.coins += 60; store.set(P); tone(700, .1); tone(1050, .14, 'triangle', .05, .08); home(); });
 function deckClick(e){
   const u = e.target.closest('[data-rank]');
   if (u && !u.disabled){
@@ -960,7 +1141,7 @@ function deckClick(e){
     keepScroll(() => { P.coins -= rcost(r); P.rank[k] = r + 1; store.set(P); tone(700, .1); tone(1050, .12, 'triangle', .05, .07); }); return;
   }
   const b = e.target.closest('[data-card]'); if (!b || b.disabled) return;
-  const k = b.dataset.card, list = UNITS[k] ? P.guns : P.fx, cap = UNITS[k] ? NG : NF, at = list.indexOf(k);
+  const k = b.dataset.card, list = isForce(k) ? P.guns : P.fx, cap = isForce(k) ? NG : NF, at = list.indexOf(k);
   keepScroll(() => { if (at >= 0) list.splice(at, 1); else if (list.length < cap) list.push(k); store.set(P); tone(520, .06); });
 }
 $('guns-list').addEventListener('click', deckClick);
@@ -975,7 +1156,7 @@ $('settings').addEventListener('click', e => {
   if (b.dataset.set === 'pattern'){ P.pattern = !P.pattern; wipe = false; }
   else if (b.dataset.set === 'sound'){ P.sound = !P.sound; wipe = false; tone(660, .1); }
   else if (!wipe){ wipe = true; home(); return; }
-  else { wipe = false; Object.assign(P, { level:1, best:1, coins:0, up:{ rapid:0, dynamo:0, van:0 }, guns:[], fx:[], rank:{}, stars:{}, tut:false }); tidy(); clearMatch(); tab = 'battle'; }
+  else { wipe = false; Object.assign(P, { level:1, best:1, coins:0, up:{ rapid:0, dynamo:0, van:0 }, guns:[], fx:[], rank:{}, stars:{}, goals:{}, streak:0, tut:false }); tidy(); clearMatch(); tab = 'battle'; }
   store.set(P); home();
 });
 function play(){ if (P.guns.length !== NG || P.fx.length !== NF) return; clearMatch(); $('dlg-home').hidden = true; $('dlg-over').hidden = true; paused = false; newMatch(false); tone(440, .1); }
@@ -986,7 +1167,7 @@ $('btn-pause').addEventListener('click', () => pause(true));
 $('pause-resume').addEventListener('click', () => pause(false));
 $('pause-quit').addEventListener('click', () => { clearMatch(); home(); });
 
-window.__flipfire = { P, CARDS, UNITS, tidy, play:() => play(), state:() => M, run(bot){ while (!M.over){ bot(M, playAt, power); step(1/30); } return share(); } };
+window.__flipfire = { P, CARDS, UNITS, MOB, RIVALS, isForce, tidy, play:() => play(), state:() => M, run(bot){ while (!M.over){ bot(M, playAt, power); step(1/30); } return share(); } };
 new ResizeObserver(layout).observe($('field'));
 layout(); home();
 if (loadMatch()){ $('dlg-home').hidden = true; paused = true; $('dlg-pause').hidden = false; }
